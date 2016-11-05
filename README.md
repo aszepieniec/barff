@@ -9,3 +9,6 @@ Ansi C library for basic algebra routines for small prime finite fields, chiefly
  * csprng for randomness
  * polynomial and extension field arithmetic
 
+# How To
+ * compile: `gcc -o test_algebra *.c -ansi -Wpedantic -DDEBUG`
+

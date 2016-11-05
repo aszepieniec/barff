@@ -15,11 +15,14 @@
 int xgcd( int a, int b, int* x, int* y, int* gcd )
 {
     int q, r;
+    int u;
+    int v;
+    int m, n;
+
     *x = 0;
     *y = 1;
-    int u = 1;
-    int v = 0;
-    int m, n;
+    u = 1;
+    v = 0;
     while( a != 0 )
     {
         q = b / a;
@@ -36,7 +39,7 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
     *gcd = b;
     
     return *gcd;
-};
+}
 
 /**
  * gf_inverse
@@ -44,13 +47,16 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
  */
 unsigned char gf_inverse( unsigned char element )
 {
-    int a = element;
-    int b = MOD;
+    int a;
+    int b;
     int x, y, g;
+
+    a = element;
+    b = MOD;
     xgcd(a, b, &x, &y, &g);
     x = (MOD + (x % MOD)) % MOD;
     return x;
-};
+}
 
 /**
  * gfm
@@ -63,7 +69,7 @@ gfmatrix gfm( unsigned short int height, unsigned short int width, unsigned char
     mat.width = width;
     mat.data = pdata;
     return mat;
-};
+}
 
 /**
  * gfm_init
@@ -76,7 +82,7 @@ gfmatrix gfm_init( unsigned short int height, unsigned short int width )
     mat.height = height;
     mat.data = malloc(width*height);
     return mat;
-};
+}
 
 /**
  * gfm_destroy
@@ -92,11 +98,13 @@ int gfm_destroy( gfmatrix fm )
     fm.width = 0;
     fm.height = 0;
     return 1;
-};
+}
 
 /**
  * gfm_copy
- * Copy the contents of one matrix to another.
+ * Copy the contents of one matrix to another. Does not allocate
+ * memory for the new object; you must do that yourself! (Or use
+ * gfm_copy_new instead.)
  * @promise
  *  * dest and source have the same dimensions
  * @return
@@ -114,7 +122,20 @@ int gfm_copy( gfmatrix dest, gfmatrix source )
     }
 
     return 1;
-};
+}
+
+/**
+ * gfm_copy_new
+ * Copy one matrix into a new object. Don't forget to call
+ * gfm_destroy at the end of scope!
+ */
+gfmatrix gfm_copy_new( gfmatrix source )
+{
+    gfmatrix mat;
+    mat = gfm_init(source.height, source.width);
+    gfm_copy(mat, source);
+    return mat;
+}
 
 /**
  * gfm_eye
@@ -136,7 +157,69 @@ int gfm_eye( gfmatrix eye )
         eye.data[i*eye.width + i] = 1;
     }
     return 1;
-};
+}
+
+/**
+ * Decide whether the given matrix is an identity matrix or, for
+ * rectangular matrices, whether the main diagonal has ones and all
+ * the rest is zero.
+ * @return
+ *  * 1 if identity, 0 otherwise
+ */
+int gfm_is_eye( gfmatrix eye )
+{
+    unsigned int i, j;
+    int b = 1;
+    for( i = 0 ; i < eye.height ; ++i )
+    {
+        for( j = 0 ; j < eye.width ; ++j )
+        {
+            if( i == j )
+            {
+                if( eye.data[i*eye.width + j] != 1 )
+                {
+                    b = 0;
+                }
+            }
+            else
+            {
+                if( eye.data[i*eye.width + j] != 0 )
+                {
+                    b = 0;
+                }
+            }
+        }
+    }
+
+    return b;
+}
+
+/**
+ * gfm_equals
+ * Test two matrices for equality.
+ * @return
+ *  * 1 if equal, 0 otherwise
+ */
+int gfm_equals( gfmatrix lhs, gfmatrix rhs )
+{
+    unsigned int i, j;
+    int b;
+    if( lhs.width != rhs.width || lhs.height != rhs.height )
+    {
+        return 0;
+    }
+
+    b = 1;
+    for( i = 0 ; i < lhs.height ; ++i )
+    {
+        for( j = 0 ; j < lhs.width ; ++j )
+        {
+            b = b & (lhs.data[lhs.width*i + j] == rhs.data[rhs.width*i + j]);
+        }
+    }
+
+    return b;
+}
 
 /**
  * gfm_zero
@@ -157,7 +240,7 @@ int gfm_zeros( gfmatrix zero )
         }
     }
     return 1;
-};
+}
 
 /**
  * gfm_random
@@ -175,7 +258,7 @@ int gfm_random( gfmatrix random, unsigned char * randomness )
         }
     }
     return 1;
-};
+}
 
 /**
  * gfm_random_upper_triangular
@@ -195,48 +278,102 @@ int gfm_random_upper_triangular( gfmatrix random, unsigned char * randomness )
         }
     }
     return 1;
-};
+}
+
+/**
+ * gfm_random_invertible
+ * Generate a random invertible matrix. This is accomplished by first
+ * generating two random triangular matrices, where one has ones on
+ * the diagonal is upper-triangular and the other has random nonzero
+ * elements on the diagonal in addition to being lower-triangular.
+ * The generated matrix is the product of the two triangular ones.
+ * @params
+ *  * mat : the matrix object in which to store the generated random
+ *    invertible matrix
+ *  * randomness : a byte stream of randomness consisting of at least
+ *    nxn bytes, where n is the width (and height) of the matrix.
+ * @return
+ *  * 1 if success, 0 otherwise
+ */
+int gfm_random_invertible( gfmatrix mat, unsigned char * randomness )
+{
+    gfmatrix utm, ltm;
+    unsigned int offset;
+    unsigned int i;
+
+#ifdef DEBUG
+    if( mat.height != mat.width )
+    {
+        printf("gfm_random_invertible: cannot generate random invertible matrix because matrix not square! %ix%i\n", mat.height, mat.width);
+        return 0;
+    }
+#endif
+
+    utm = gfm_init(mat.height, mat.width);
+    ltm = gfm_init(mat.height, mat.width);
+
+    /* generate triangular matrices with ones on the diagonal */
+    gfm_random_upper_triangular(utm, randomness);
+    gfm_random_upper_triangular(ltm, randomness+(mat.height * (mat.width - 1) / 2));
+    gfm_transpose(&ltm);
+
+    /* set the diagonal elements of one matrix to random nonzero
+     * elements */
+    offset = mat.height * (mat.width - 1);
+    for( i = 0 ; i < utm.height ; ++i )
+    {
+        utm.data[i*utm.width + i] = 1 + (randomness[offset+i] % (MOD - 1));
+    }
+
+    /* multiply L * U to get the random invertible matrix */
+    gfm_multiply(mat, ltm, utm);
+
+    gfm_destroy(ltm);
+    gfm_destroy(utm);
+
+    return 1;
+}
 
 /**
  * gfm_transpose_square
  * Perform a matrix transposition in situ.
  */
-int gfm_transpose_square( gfmatrix * trans )
+int gfm_transpose( gfmatrix * trans )
 {
     unsigned char a;
     unsigned short int i, j;
 
-    if( trans.width > trans.height )
+    if( trans->width > trans->height )
     {
-        for( i = 0 ; i < trans.height ; ++i )
+        for( i = 0 ; i < trans->height ; ++i )
         {
-            for( j = i+1 ; j < trans.width ; ++j )
+            for( j = i+1 ; j < trans->width ; ++j )
             {
-                a = trans.data[i*trans.width + j];
-                trans.data[i*trans.width + j] = trans.data[j*trans.width + i];
-                trans.data[j*trans.width + i] = a;
+                a = trans->data[i*trans->width + j];
+                trans->data[i*trans->width + j] = trans->data[j*trans->width + i];
+                trans->data[j*trans->width + i] = a;
             }
         }
     }
     else
     {
-        for( i = 0 ; i < trans.height ; ++i )
+        for( i = 0 ; i < trans->height ; ++i )
         {
-            for( j = 0 ; j < i && j < trans.width ; ++j )
+            for( j = 0 ; j < i && j < trans->width ; ++j )
             {
-                a = trans.data[i*trans.width + j];
-                trans.data[i*trans.width + j] = trans.data[j*trans.width + i];
-                trans.data[j*trans.width + i] = a;
+                a = trans->data[i*trans->width + j];
+                trans->data[i*trans->width + j] = trans->data[j*trans->width + i];
+                trans->data[j*trans->width + i] = a;
             }
         }
     }
 
-    i = trans.width;
-    trans.width = trans.height;
-    trans.height = a;
+    a = trans->width;
+    trans->width = trans->height;
+    trans->height = a;
 
     return 1;
-};
+}
 
 /**
  * gfm_multiply
@@ -259,6 +396,9 @@ int gfm_transpose_square( gfmatrix * trans )
  */
 int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
 {
+    unsigned short int i, j, k;
+    unsigned int acc;
+
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != right.width || left.width != right.height )
         {
@@ -267,8 +407,6 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
         }
     #endif
 
-    unsigned short int i, j, k;
-    unsigned int acc;
     for( i = 0 ; i < left.height ; ++i )
     {
         for( j = 0 ; j < right.width ; ++j )
@@ -283,7 +421,7 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_multiply_constant
@@ -291,18 +429,27 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
  * @return
  *  * 1 if success
  */
-int gfm_multiply_constant( gfmatrix dest, unsigned char constant )
+int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constant )
 {
     unsigned short int i, j;
+
+#ifdef DEBUG
+    if( dest.width != source.width || dest.height != source.height )
+    {
+        printf("gfm_multiply_constant: cannot multiply matrix with constant because dimensions of destination do not match those of source! %ix%i <- %ix%i\n", dest.height, dest.width, source.height, source.width);
+        return 0;
+    }
+#endif
+
     for( i = 0 ; i < dest.height ; ++i )
     {
         for( j = 0 ; j < dest.width ; ++j )
         {
-            dest.data[i*dest.width + j] = (dest.data[i*dest.width + j] * constant) % MOD;
+            dest.data[i*dest.width + j] = (source.data[i*dest.width + j] * constant) % MOD;
         }
     }
     return 1;
-};
+}
 
 /**
  * gfm_add
@@ -317,6 +464,8 @@ int gfm_multiply_constant( gfmatrix dest, unsigned char constant )
  */
 int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
 {
+    unsigned short int i, j;
+
     #ifdef DEBUG
         if( dest.width != left.width || left.width != right.width || dest.height != left.height || left.height != right.height )
         {
@@ -325,7 +474,6 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
         }
     #endif
     
-    unsigned short int i, j;
     for( i = 0 ; i < dest.height ; ++i )
     {
         for( j = 0 ; j < dest.width ; ++j )
@@ -335,7 +483,7 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_weighted_sum
@@ -352,6 +500,9 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
  */
 int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_matrix, unsigned char right_constant, gfmatrix right_matrix )
 {
+    unsigned short int i, j;
+    unsigned int a;
+
     #ifdef DEBUG
         if( dest.width != left_matrix.width || left_matrix.width != right_matrix.width || dest.height != left_matrix.height || left_matrix.height != right_matrix.height )
         {
@@ -360,8 +511,6 @@ int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_
         }
     #endif
     
-    unsigned short int i, j;
-    unsigned int a;
     for( i = 0 ; i < dest.height ; ++i )
     {
         for( j = 0 ; j < dest.width ; ++j )
@@ -372,7 +521,7 @@ int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_rowop
@@ -395,7 +544,7 @@ int gfm_rowop( gfmatrix mat, unsigned short int destrow, unsigned short int sour
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_scalerow
@@ -416,7 +565,7 @@ int gfm_scalerow( gfmatrix mat, unsigned short int rowidx, unsigned char constan
         mat.data[rowidx*mat.width + j] = (mat.data[rowidx*mat.width + j] * constant) % MOD;
     }
     return 1;
-};
+}
 
 /**
  * gfm_fliprows
@@ -439,7 +588,7 @@ int gfm_fliprows( gfmatrix mat, unsigned short int destrow, unsigned short int s
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_redech
@@ -499,7 +648,7 @@ int gfm_redech( gfmatrix mat )
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_stack
@@ -512,6 +661,8 @@ int gfm_redech( gfmatrix mat )
  */
 int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
 {
+    unsigned short int i, j;
+
     #ifdef DEBUG
         if( mat.width != top.width || top.width != bottom.width || mat.height != top.height + bottom.height )
         {
@@ -519,7 +670,6 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
             return 0;
         }
     #endif
-    unsigned short int i, j;
     for( i = 0 ; i < top.height ; ++i )
     {
         for( j = 0 ; j < top.width ; ++j )
@@ -536,7 +686,7 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
     }
 
     return 1;
-};
+}
 
 /**
  * gfm_cat
@@ -551,6 +701,8 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
  */
 int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
 {
+    unsigned short int i, j;
+
     #ifdef DEBUG
         if( res.height != left.height || left.height != right.height || res.width != left.width + right.width )
         {
@@ -558,7 +710,6 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
             return 0;
         }
     #endif
-    unsigned short int i, j;
 
     for( i = 0 ; i < res.height ; ++i )
     {
@@ -572,7 +723,7 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
         }
     }
     return 1;
-};
+}
 
 /**
  * gfm_slice
@@ -588,6 +739,7 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
  */
 int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, unsigned short int col_start )
 {
+    unsigned short int i, j;
     #ifdef DEBUG
         if( source.width < col_start + dest.width || source.height < row_start + dest.height )
         {
@@ -595,7 +747,6 @@ int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, uns
             return 0;
         }
     #endif
-    unsigned short int i, j;
     for( i = 0 ; i < dest.height ; ++i )
     {
         for( j = 0 ; j < dest.width ; ++j )
@@ -604,7 +755,7 @@ int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, uns
         }
     }
     return 0;
-};
+}
 
 /**
  * gfm_inverse
@@ -615,7 +766,11 @@ int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, uns
 int gfm_inverse( gfmatrix inv, gfmatrix mat )
 {
     unsigned int i, j;
-    unsigned short int catwidth = inv.width + mat.width;
+    unsigned short int catwidth;
+    int invertible;
+    gfmatrix concat;
+   
+    catwidth = inv.width + mat.width;
 
     /* Set inv to the identity matrix. */
     for( i = 0 ; i < inv.height ; ++i )
@@ -628,11 +783,25 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
     }
 
     /* Concatenate mat with identity */
-    gfmatrix concat = gfm_init(mat.height, catwidth);
+    concat = gfm_init(mat.height, catwidth);
     gfm_cat(concat, mat, inv);
 
     /* row-reduce concat to echelon form */
     gfm_redech(concat);
+
+    /* test if main diagonal has only ones, because otherwise the
+     * matrix is not invertible */
+    invertible = 1;
+    for( i = 0 ; i < inv.height ; ++i )
+    {
+        invertible = invertible & (int)(concat.data[i*concat.width + i]);
+    }
+
+    if( !invertible )
+    {
+        gfm_destroy(concat);
+        return 0;
+    }
 
     /* select rightmost square from concat */
     for( i = 0 ; i < inv.height ; ++i )
@@ -647,8 +816,9 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
     gfm_destroy(concat);
 
     return 1;
-};
+}
 
+#ifdef DEBUG
 /**
  * gfm_print
  * Use printf to print the matrix to stdout.
@@ -666,7 +836,22 @@ int gfm_print( gfmatrix mat )
         }
         printf("\n");
     }
-};
+}
+
+/**
+ * gfm_print_transpose
+ * Use printf to print the transpose of the matrix to stdout.
+ */
+int gfm_print_transpose( gfmatrix mat )
+{
+    gfmatrix temp;
+    temp = gfm_copy_new(mat);
+    gfm_transpose(&temp);
+    gfm_print(temp);
+    gfm_destroy(temp);
+    return 1;
+}
+#endif
 
 /**
  * hqs
@@ -680,7 +865,7 @@ hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m )
     hqs.n = n;
     hqs.m = m;
     return hqs;
-};
+}
 
 /**
  * hqs_init
@@ -690,19 +875,19 @@ hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m )
  */
 hqsystem hqs_init( unsigned short int n, unsigned short int m )
 {
+    unsigned int i;
     hqsystem hqs;
     hqs.n = n;
     hqs.m = m;
     hqs.quadratic_forms = malloc(sizeof(gfmatrix) * m);
-    unsigned int i;
     for( i = 0 ; i < m ; ++i )
     {
         hqs.quadratic_forms[i].data = malloc(n*n);
-        hqs.width = n;
-        hqs.height = n;
+        hqs.quadratic_forms[i].width = n;
+        hqs.quadratic_forms[i].height = n;
     }
     return hqs;
-};
+}
 
 /**
  * hqs_destroy
@@ -714,11 +899,11 @@ int hqs_destroy( hqsystem sys )
     unsigned int i;
     for( i = 0 ; i < sys.m ; ++i )
     {
-        free(hqs.quadratic_forms[i].data);
+        free(sys.quadratic_forms[i].data);
     }
-    free(hqs.quadratic_forms);
+    free(sys.quadratic_forms);
     return 1;
-};
+}
 
 /**
  * hqs_copy
@@ -729,6 +914,7 @@ int hqs_destroy( hqsystem sys )
  */
 int hqs_copy( hqsystem dest, hqsystem source )
 {
+    unsigned int i;
 #ifdef DEBUG
     if( dest.n != source.n || dest.m != source.m )
     {
@@ -737,13 +923,63 @@ int hqs_copy( hqsystem dest, hqsystem source )
     }
 #endif
 
-    unsigned int i;
     for( i = 0 ; i < dest.m ; ++i )
     {
         gfm_copy(dest.quadratic_forms[i], source.quadratic_forms[i]);
     }
     return 1;
-};
+}
+
+/**
+ * hqs_copy_new
+ * Copy one homogeneous quadratic system to a new one. Remember to
+ * destroy it when scope ends!
+ * @params
+ *  * source : the homogeneous quadratic system to copy
+ * @return
+ *  * dest : a new homogeneous quadratic system identical to source
+ */
+hqsystem hqs_copy_new( hqsystem source )
+{
+    hqsystem dest;
+    dest = hqs_init(source.n, source.m);
+    hqs_copy(dest, source);
+    return dest;
+}
+
+/**
+ * hqs_random
+ * Given an empty homogeneous quadratic system, assign random values
+ * to its coefficients.
+ * The amount of randomness required is m*n*n bytes.
+ * @params
+ *  * sys : a homogeneous quadratic system; the dimensions of this
+ *    system will be retained; the coefficients (entries of the
+ *    matrices) will be forgotten
+ *  * randomness : a large enough stream of characters to draw
+ *    entropy from
+ * @result
+ *  * sys will contain random coefficients
+ * @return
+ *  * 1 if success, 0 otherwise
+ */
+int hqs_random( hqsystem sys, unsigned char * randomness )
+{
+    unsigned int i, j, k, l;
+    l = 0;
+    for( k = 0 ; k < sys.m ; ++k )
+    {
+        for( i = 0 ; i < sys.n ; ++i )
+        {
+            for( j = 0 ; j < sys.n ; ++j )
+            {
+                sys.quadratic_forms[k].data[i*sys.n + j] = randomness[l++] % MOD;
+            }
+        }
+    }
+
+    return 1;
+}
 
 /**
  * hqs_compose_output
@@ -763,6 +999,11 @@ int hqs_copy( hqsystem dest, hqsystem source )
  */
 int hqs_compose_output( gfmatrix T, hqsystem F )
 {
+    unsigned int i, j;
+    /* declare helper variables */
+    hqsystem P;
+    gfmatrix temp;
+
 #ifdef DEBUG
     if( T.width != F.m )
     {
@@ -772,11 +1013,10 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
 #endif
 
     /* init helper variables */
-    hqsystem P = hqs_init(F.n, T.height);
+    P = hqs_init(F.n, T.height);
     temp = gfm_init(F.n, F.n);
 
     /* perform multiplication */
-    unsigned int i, j;
     for( i = 0 ; i < T.height ; ++i )
     {
         gfm_zeros(P.quadratic_forms[i]);
@@ -795,7 +1035,7 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
     gfm_destroy(temp);
 
     return 1;
-};
+}
 
 /**
  * hqs_compose_input
@@ -815,6 +1055,13 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
  */
 int hqs_compose_input( hqsystem F, gfmatrix S )
 {
+    unsigned int i;
+
+    /* declare helper variables */
+    gfmatrix temp;
+    gfmatrix ST;
+
+    /* debug stuff */
 #ifdef DEBUG
     if( F.n != S.height || S.height != S.width )
     {
@@ -824,13 +1071,13 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
 #endif
 
     /* init helper variables */
-    gfmatrix temp = gfm_init(S.height, S.height);
-    gfmatrix ST = gfm_init(S.height, S.width);
+
+    temp = gfm_init(S.height, S.height);
+    ST = gfm_init(S.height, S.width);
     gfm_copy(ST, S);
     gfm_transpose(&ST);
 
     /* perform multiplication */
-    unsigned int i;
     for( i = 0 ; i < F.m ; ++i )
     {
         gfm_multiply(temp, ST, F.quadratic_forms[i]);
@@ -842,5 +1089,49 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
     gfm_destroy(ST);
 
     return 1;
-};
+}
+
+/**
+ * hqs_eval
+ * Evaluate a homogeneous quadratic system in a vector or, by
+ * treating the columns as a list of vectors, as a matrix.
+ */
+int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x )
+{
+    unsigned int i, j, k;
+    gfmatrix vector, transposed_vector, temp, e;
+    unsigned char edata;
+
+#ifdef DEBUG
+    if( y.height != sys.m || sys.n != x.height || y.width != x.width )
+    {
+        printf("hqs_eval: cannot evaluate quadratic system because of dimension mismatch! F: %i -> %i vs. in: %ix%i, out: %ix%i\n", sys.n, sys.m, x.height, x.width, y.height, y.width);
+        return 0;
+    }
+#endif
+
+    vector = gfm_init(sys.n, 1);
+    transposed_vector = gfm(1, sys.n, vector.data);
+    temp = gfm_init(sys.n, 1);
+    e = gfm(1, 1, &edata);
+
+    for( j = 0 ; j < x.width ; ++j )
+    {
+        gfm_slice(vector, x, 0, j);
+        for( i = 0 ; i < x.height ; ++i )
+        {
+            for( k = 0 ; k < sys.m ; ++k )
+            {
+                gfm_multiply(temp, sys.quadratic_forms[k], vector);
+                gfm_multiply(e, transposed_vector, temp);
+                y.data[k*y.width + j] = e.data[0];
+            }
+        }
+    }
+
+    gfm_destroy(vector);
+    gfm_destroy(temp);
+
+    return 1;
+}
 

@@ -30,12 +30,15 @@ int gfm_destroy( gfmatrix fm );
 int gfm_copy( gfmatrix dest, gfmatrix source );
 
 int gfm_eye( gfmatrix mat );
+int gfm_is_eye( gfmatrix mat );
+int gfm_equals( gfmatrix lhs, gfmatrix rhs );
 int gfm_zeros( gfmatrix mat );
 int gfm_random( gfmatrix mat, unsigned char * randomness );
 int gfm_random_upper_triangular( gfmatrix mat, unsigned char * randomness );
+int gfm_random_invertible( gfmatrix mat, unsigned char * randomness );
 int gfm_transpose( gfmatrix * mat );
 int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right );
-int gfm_multiply_constant( gfmatrix dest, unsigned char constant );
+int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constant );
 int gfm_sum( gfmatrix dest, gfmatrix left_matrix, gfmatrix right_matrix );
 int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_matrix, unsigned char right_constant, gfmatrix right_matrix );
 int gfm_rowop( gfmatrix mat, unsigned short int destrow, unsigned short int sourcerow, unsigned char constant, unsigned short int offset );
@@ -74,9 +77,12 @@ typedef struct
 hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m );
 hqsystem hqs_init( unsigned short int n, unsigned short int m );
 int hqs_destroy( hqsystem sys );
+int hqs_random( hqsystem sys, unsigned char * randomness );
 int hqs_copy( hqsystem dest, hqsystem source );
+hqsystem hqs_copy_new( hqsystem source );
 int hqs_compose_output( gfmatrix T, hqsystem P );
 int hqs_compose_input( hqsystem P, gfmatrix S );
+int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x );
 
 #endif
 

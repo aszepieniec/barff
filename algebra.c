@@ -1,10 +1,7 @@
 #include "algebra.h"
 
 #include <stdlib.h>
-
-#ifdef DEBUG
 #include <stdio.h>
-#endif
 
 /**
  * xgcd
@@ -204,6 +201,7 @@ int gfm_equals( gfmatrix lhs, gfmatrix rhs )
 {
     unsigned int i, j;
     int b;
+
     if( lhs.width != rhs.width || lhs.height != rhs.height )
     {
         return 0;
@@ -245,11 +243,24 @@ int gfm_zeros( gfmatrix zero )
 /**
  * gfm_random
  * Put random values into the matrix.
+ * @params
+ *  * random : matrix objects with data already allocated and whose
+ *    elements are to be assigned random values
+ *  * rng : pointer to the csprng object from which to draw the
+ *    random numbers
+ * @result
+ *  * random <-$- matrix_space(random.height, random.width)
  */
-int gfm_random( gfmatrix random, unsigned char * randomness )
+int gfm_random( gfmatrix random, csprng * rng )
 {
     unsigned short int i, j;
-    unsigned int l = 0;
+    unsigned int l;
+    unsigned short int * randomness;
+   
+    randomness = malloc(sizeof(unsigned short int) * random.width * random.height);
+    csprng_generate(rng, sizeof(unsigned short int) * random.height * random.width, (unsigned char *)randomness);
+
+    l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
         for( j = 0 ; j < random.width ; ++j )
@@ -257,6 +268,9 @@ int gfm_random( gfmatrix random, unsigned char * randomness )
             random.data[i*random.width + j] = randomness[l++] % MOD;
         }
     }
+
+    free(randomness);
+
     return 1;
 }
 
@@ -264,11 +278,29 @@ int gfm_random( gfmatrix random, unsigned char * randomness )
  * gfm_random_upper_triangular
  * Set the matrix to a random upper triangular with ones on the
  * diagonal.
+ * @params
+ *  * random : matrix objects with data already allocated and whose
+ *    elements above the diagonal are to be assigned random values;
+ *    whereas the elements above the diagonal are to be 0 and the
+ *    elements on the diagonal are to be 1.
+ *  * rng : pointer to the csprng object from which to draw the
+ *    random numbers
+ * @result
+ *  * random <-$- matrix_space(random.height, random.width)
+ *    subject to
+ *    forall i . random[i,i] = 1
+ *    forall i, j>i . random[i,j] = 0
  */
-int gfm_random_upper_triangular( gfmatrix random, unsigned char * randomness )
+int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
 {
     unsigned short int i, j;
-    unsigned int l = 0;
+    unsigned int l;
+    unsigned short int * randomness;
+
+    randomness = malloc(sizeof(unsigned short int) * random.height * random.width);
+    csprng_generate(rng, sizeof(unsigned short int) * random.height * random.width, (unsigned char *)randomness);
+
+    l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
         random.data[i*random.width + i] = 1;
@@ -277,6 +309,9 @@ int gfm_random_upper_triangular( gfmatrix random, unsigned char * randomness )
             random.data[i*random.width + j] = randomness[l++] % MOD;
         }
     }
+
+    free(randomness);
+
     return 1;
 }
 
@@ -290,16 +325,25 @@ int gfm_random_upper_triangular( gfmatrix random, unsigned char * randomness )
  * @params
  *  * mat : the matrix object in which to store the generated random
  *    invertible matrix
- *  * randomness : a byte stream of randomness consisting of at least
- *    nxn bytes, where n is the width (and height) of the matrix.
+ *  * rng : a pointer to the csprng object to generate the random
+ *    numbers from
+ * @pre
+ *  * mat.height = mat.width
+ * @result
+ *  * mat <-$- GL(mat.height)
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_random_invertible( gfmatrix mat, unsigned char * randomness )
+int gfm_random_invertible( gfmatrix mat, csprng * rng )
 {
     gfmatrix utm, ltm;
     unsigned int offset;
     unsigned int i;
+
+    unsigned short int * randomness;
+
+    randomness = malloc(sizeof(unsigned short int) * mat.height);
+    csprng_generate(rng, sizeof(unsigned short int) * mat.height, (unsigned char *)randomness);
 
 #ifdef DEBUG
     if( mat.height != mat.width )
@@ -313,16 +357,15 @@ int gfm_random_invertible( gfmatrix mat, unsigned char * randomness )
     ltm = gfm_init(mat.height, mat.width);
 
     /* generate triangular matrices with ones on the diagonal */
-    gfm_random_upper_triangular(utm, randomness);
-    gfm_random_upper_triangular(ltm, randomness+(mat.height * (mat.width - 1) / 2));
+    gfm_random_upper_triangular(utm, rng);
+    gfm_random_upper_triangular(ltm, rng);
     gfm_transpose(&ltm);
 
     /* set the diagonal elements of one matrix to random nonzero
      * elements */
-    offset = mat.height * (mat.width - 1);
     for( i = 0 ; i < utm.height ; ++i )
     {
-        utm.data[i*utm.width + i] = 1 + (randomness[offset+i] % (MOD - 1));
+        utm.data[i*utm.width + i] = 1 + (randomness[i] % (MOD - 1));
     }
 
     /* multiply L * U to get the random invertible matrix */
@@ -330,6 +373,8 @@ int gfm_random_invertible( gfmatrix mat, unsigned char * randomness )
 
     gfm_destroy(ltm);
     gfm_destroy(utm);
+
+    free(randomness);
 
     return 1;
 }
@@ -818,7 +863,6 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
     return 1;
 }
 
-#ifdef DEBUG
 /**
  * gfm_print
  * Use printf to print the matrix to stdout.
@@ -851,7 +895,6 @@ int gfm_print_transpose( gfmatrix mat )
     gfm_destroy(temp);
     return 1;
 }
-#endif
 
 /**
  * hqs
@@ -956,16 +999,21 @@ hqsystem hqs_copy_new( hqsystem source )
  *  * sys : a homogeneous quadratic system; the dimensions of this
  *    system will be retained; the coefficients (entries of the
  *    matrices) will be forgotten
- *  * randomness : a large enough stream of characters to draw
- *    entropy from
+ *  * rng : pointer to the csprng object to draw the random numbers
+ *    from
  * @result
  *  * sys will contain random coefficients
  * @return
  *  * 1 if success, 0 otherwise
  */
-int hqs_random( hqsystem sys, unsigned char * randomness )
+int hqs_random( hqsystem sys, csprng * rng )
 {
     unsigned int i, j, k, l;
+    unsigned short int * randomness;
+
+    randomness = malloc(sizeof(unsigned short int) * sys.m * sys.n * sys.n);
+    csprng_generate(rng, sizeof(unsigned short int) * sys.m * sys.n * sys.n, (unsigned char *)randomness);
+
     l = 0;
     for( k = 0 ; k < sys.m ; ++k )
     {
@@ -977,6 +1025,8 @@ int hqs_random( hqsystem sys, unsigned char * randomness )
             }
         }
     }
+
+    free(randomness);
 
     return 1;
 }

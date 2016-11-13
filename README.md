@@ -4,11 +4,12 @@ Ansi C library for basic algebra routines for small prime finite fields, chiefly
 # Features
  * matrix routines
  * homogeneous quadratic systems
+ * csprng based on an ANSI C89 compliant version of Keccak
 
 # TODO
- * csprng for randomness
+ * debug conditional jump based on uninitialized value
  * polynomial and extension field arithmetic
 
 # How To
- * compile: `gcc -o test_algebra *.c -ansi -Wpedantic -DDEBUG`
+ * compile: `gcc -o test_algebra *.c -ansi -Wpedantic`
 

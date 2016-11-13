@@ -1,6 +1,8 @@
 #ifndef ALGEBRA_H
 #define ALGEBRA_H
 
+#include "csprng.h"
+
 #ifndef MOD
 #define MOD 61
 #endif
@@ -33,9 +35,9 @@ int gfm_eye( gfmatrix mat );
 int gfm_is_eye( gfmatrix mat );
 int gfm_equals( gfmatrix lhs, gfmatrix rhs );
 int gfm_zeros( gfmatrix mat );
-int gfm_random( gfmatrix mat, unsigned char * randomness );
-int gfm_random_upper_triangular( gfmatrix mat, unsigned char * randomness );
-int gfm_random_invertible( gfmatrix mat, unsigned char * randomness );
+int gfm_random( gfmatrix mat, csprng * rng );
+int gfm_random_upper_triangular( gfmatrix mat, csprng * rng  );
+int gfm_random_invertible( gfmatrix mat, csprng * rng  );
 int gfm_transpose( gfmatrix * mat );
 int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right );
 int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constant );
@@ -77,7 +79,7 @@ typedef struct
 hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m );
 hqsystem hqs_init( unsigned short int n, unsigned short int m );
 int hqs_destroy( hqsystem sys );
-int hqs_random( hqsystem sys, unsigned char * randomness );
+int hqs_random( hqsystem sys, csprng * rng );
 int hqs_copy( hqsystem dest, hqsystem source );
 hqsystem hqs_copy_new( hqsystem source );
 int hqs_compose_output( gfmatrix T, hqsystem P );

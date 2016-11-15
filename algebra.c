@@ -303,6 +303,10 @@ int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
+        for( j = 0 ; j < i ; ++j )
+        {
+            random.data[i*random.width + j] = randomness[l++] % MOD;
+        }
         random.data[i*random.width + i] = 1;
         for( j = i+1 ; j < random.width ; ++j )
         {

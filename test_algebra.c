@@ -181,7 +181,6 @@ int test_composition()
         hqs_eval(y, P, x);
 
         equal = gfm_equals(y, ToFoSx);
-        getchar();
     }
 
     gfm_destroy(x);

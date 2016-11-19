@@ -30,6 +30,7 @@ gfmatrix gfm( unsigned short int height, unsigned short int width, unsigned char
 gfmatrix gfm_init( unsigned short int height, unsigned short int width );
 int gfm_destroy( gfmatrix fm );
 int gfm_copy( gfmatrix dest, gfmatrix source );
+gfmatrix gfm_clone( gfmatrix source );
 
 int gfm_eye( gfmatrix mat );
 int gfm_is_eye( gfmatrix mat );
@@ -40,6 +41,8 @@ int gfm_random_upper_triangular( gfmatrix mat, csprng * rng  );
 int gfm_random_invertible( gfmatrix mat, csprng * rng  );
 int gfm_transpose( gfmatrix * mat );
 int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right );
+int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT );
+int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right );
 int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constant );
 int gfm_sum( gfmatrix dest, gfmatrix left_matrix, gfmatrix right_matrix );
 int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_matrix, unsigned char right_constant, gfmatrix right_matrix );

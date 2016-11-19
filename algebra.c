@@ -78,6 +78,9 @@ gfmatrix gfm_init( unsigned short int height, unsigned short int width )
     mat.width = width;
     mat.height = height;
     mat.data = malloc(width*height);
+    /*
+    printf("created gfm object with data member set to memory address %#010x\n", mat.data);
+    */
     return mat;
 }
 
@@ -91,6 +94,9 @@ gfmatrix gfm_init( unsigned short int height, unsigned short int width )
  */
 int gfm_destroy( gfmatrix fm )
 {
+    /*
+    printf("destroying gfm object with data member set to memory address %#010x\n", fm.data);
+    */
     free(fm.data);
     fm.width = 0;
     fm.height = 0;
@@ -101,9 +107,10 @@ int gfm_destroy( gfmatrix fm )
  * gfm_copy
  * Copy the contents of one matrix to another. Does not allocate
  * memory for the new object; you must do that yourself! (Or use
- * gfm_copy_new instead.)
+ * gfm_clone instead.)
  * @promise
- *  * dest and source have the same dimensions
+ *  * dest.width <= source.width
+ *  * dest.height <= source.height
  * @return
  *  * 1 if success
  */
@@ -122,11 +129,11 @@ int gfm_copy( gfmatrix dest, gfmatrix source )
 }
 
 /**
- * gfm_copy_new
+ * gfm_clone
  * Copy one matrix into a new object. Don't forget to call
  * gfm_destroy at the end of scope!
  */
-gfmatrix gfm_copy_new( gfmatrix source )
+gfmatrix gfm_clone( gfmatrix source )
 {
     gfmatrix mat;
     mat = gfm_init(source.height, source.width);
@@ -392,34 +399,24 @@ int gfm_transpose( gfmatrix * trans )
     unsigned char a;
     unsigned short int i, j;
 
-    if( trans->width > trans->height )
-    {
-        for( i = 0 ; i < trans->height ; ++i )
-        {
-            for( j = i+1 ; j < trans->width ; ++j )
-            {
-                a = trans->data[i*trans->width + j];
-                trans->data[i*trans->width + j] = trans->data[j*trans->width + i];
-                trans->data[j*trans->width + i] = a;
-            }
-        }
-    }
-    else
-    {
-        for( i = 0 ; i < trans->height ; ++i )
-        {
-            for( j = 0 ; j < i && j < trans->width ; ++j )
-            {
-                a = trans->data[i*trans->width + j];
-                trans->data[i*trans->width + j] = trans->data[j*trans->width + i];
-                trans->data[j*trans->width + i] = a;
-            }
-        }
-    }
+    gfmatrix T;
+
+    T = gfm_init(trans->height, trans->width);
+    gfm_copy(T, *trans);
 
     a = trans->width;
     trans->width = trans->height;
     trans->height = a;
+
+    for( i = 0 ; i < trans->height ; ++i )
+    {
+        for( j = 0 ; j < trans->width ; ++j )
+        {
+            trans->data[i*trans->width + j] = T.data[j*T.width + i];
+        }
+    }
+
+    gfm_destroy(T);
 
     return 1;
 }
@@ -464,6 +461,104 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
             for( k = 0 ; k < left.width ; ++k )
             {
                 acc = acc + left.data[i*left.width + k] * right.data[k*right.width + j];
+            }
+            dest.data[i*dest.width + j] = acc % MOD;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * gfm_multiply_transpose
+ * Multiplies the left hand side matrix with the transpose of the
+ * hand side matrix and stores the result in the third, which
+ * should be pre-allocated.
+ * @params
+ *  * dest : field matrix object to store the matrix product
+ *  * left, rightT : field matrix object representing left- and right-
+ *    hand-sides respectively.
+ * @return
+ *  * 1 if success, 0 otherwise
+ * NOTE. Modular reduction is applied only once, after computing the
+ * inner product between left row and right column and storing the
+ * intermediate result in an int. If the int is four bytes and the
+ * field element takes up a full byte, then in the worst case every
+ * product requires two bytes and every 2^k additions requires k
+ * extra bits. Since we have 16 bits to spare we have at most 2^16
+ * additions which is anyway the max. height and width of matrices
+ * that can be stored in a short unsigned int.
+ */
+int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
+{
+    unsigned short int i, j, k;
+    unsigned int acc;
+
+    #ifdef DEBUG
+        if( dest.height != left.height || dest.width != rightT.height || left.width != rightT.width )
+        {
+            printf("in gfm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
+            return 0;
+        }
+    #endif
+
+    for( i = 0 ; i < left.height ; ++i )
+    {
+        for( j = 0 ; j < rightT.height ; ++j )
+        {
+            acc = 0;
+            for( k = 0 ; k < left.width ; ++k )
+            {
+                acc = acc + left.data[i*left.width + k] * rightT.data[j*rightT.width + k];
+            }
+            dest.data[i*dest.width + j] = acc % MOD;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * gfm_transpose_multiply
+ * Multiplies the transpose of the left hand side matrix with the
+ * hand side matrix and stores the result in the third, which
+ * should be pre-allocated.
+ * @params
+ *  * dest : field matrix object to store the matrix product
+ *  * leftT, right : field matrix object representing left- and right-
+ *    hand-sides respectively.
+ * @return
+ *  * 1 if success, 0 otherwise
+ * NOTE. Modular reduction is applied only once, after computing the
+ * inner product between left row and right column and storing the
+ * intermediate result in an int. If the int is four bytes and the
+ * field element takes up a full byte, then in the worst case every
+ * product requires two bytes and every 2^k additions requires k
+ * extra bits. Since we have 16 bits to spare we have at most 2^16
+ * additions which is anyway the max. height and width of matrices
+ * that can be stored in a short unsigned int.
+ */
+int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
+{
+    unsigned short int i, j, k;
+    unsigned int acc;
+
+    #ifdef DEBUG
+        if( dest.height != leftT.width || dest.width != right.width || leftT.height != right.height )
+        {
+            printf("in gfm_transpose_multiply: trying to multiply matrices with unmatched dimensions: (%ix%i)^T * %ix%i = %ix%i\n", leftT.height, leftT.width, right.height, right.width, dest.height, dest.width);
+            return 0;
+        }
+    #endif
+
+    for( i = 0 ; i < leftT.width ; ++i )
+    {
+        for( j = 0 ; j < right.width ; ++j )
+        {
+            acc = 0;
+            for( k = 0 ; k < leftT.height ; ++k )
+            {
+                acc = acc + leftT.data[k*leftT.width + i] * right.data[k*right.width + j];
             }
             dest.data[i*dest.width + j] = acc % MOD;
         }
@@ -893,7 +988,7 @@ int gfm_print( gfmatrix mat )
 int gfm_print_transpose( gfmatrix mat )
 {
     gfmatrix temp;
-    temp = gfm_copy_new(mat);
+    temp = gfm_clone(mat);
     gfm_transpose(&temp);
     gfm_print(temp);
     gfm_destroy(temp);
@@ -1113,7 +1208,6 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
 
     /* declare helper variables */
     gfmatrix temp;
-    gfmatrix ST;
 
     /* debug stuff */
 #ifdef DEBUG
@@ -1127,20 +1221,16 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
     /* init helper variables */
 
     temp = gfm_init(S.height, S.height);
-    ST = gfm_init(S.height, S.width);
-    gfm_copy(ST, S);
-    gfm_transpose(&ST);
 
     /* perform multiplication */
     for( i = 0 ; i < F.m ; ++i )
     {
-        gfm_multiply(temp, ST, F.quadratic_forms[i]);
+        gfm_transpose_multiply(temp, S, F.quadratic_forms[i]);
         gfm_multiply(F.quadratic_forms[i], temp, S);
     }
 
     /* destroy helper variables */
     gfm_destroy(temp);
-    gfm_destroy(ST);
 
     return 1;
 }

@@ -69,7 +69,7 @@ int test_csprng( )
     }
 }
 
-int test_matrix_inverse()
+int test_matrix_inverse( )
 {
     FILE * fh;
     csprng rng;
@@ -120,7 +120,82 @@ int test_matrix_inverse()
     }
 }
 
-int test_composition()
+int test_multiply_transpose( )
+{
+    gfmatrix A, B, C1, C2;
+    unsigned short int n, m;
+    csprng rng;
+    unsigned int random;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+    printf("testing transpose-multiplication ... ");
+
+    m = 15;
+    n = 10;
+
+    A = gfm_init(n, m);
+    B = gfm_init(n, m);
+     C1 = gfm_init(n, n);
+     C2 = gfm_init(n, n);
+
+    gfm_random(A, &rng);
+    gfm_random(B, &rng);
+
+    
+    gfm_multiply_transpose(C1, A, B);
+    gfm_transpose(&B);
+    gfm_multiply(C2, A, B);
+    gfm_transpose(&B);
+
+    if( !gfm_equals(C1, C2) )
+    {
+        printf("fail!\n");
+        printf("C1 =/= C2 after gfm_multiply_transpose\n");
+        printf("rand seed: %i\n", random);
+
+        gfm_destroy(A);
+        gfm_destroy(B);
+         gfm_destroy(C1);
+         gfm_destroy(C2);
+        return 0;
+    }
+    
+    gfm_destroy(C1);
+    gfm_destroy(C2);
+    C1 = gfm_init(m, m);
+    C2 = gfm_init(m, m);
+
+    gfm_transpose_multiply(C1, A, B);
+    gfm_transpose(&A);
+    gfm_multiply(C2, A, B);
+    gfm_transpose(&A);
+
+    if( !gfm_equals(C1, C2) )
+    {
+        printf("fail!\n");
+        printf("C1 =/= C2 after gfm_transpose_multiply\n");
+        printf("rand seed: %i\n", random);
+
+        gfm_destroy(A);
+        gfm_destroy(B);
+         gfm_destroy(C1);
+         gfm_destroy(C2);
+        return 0;
+    }
+
+    printf("success!\n");
+
+    gfm_destroy(A);
+    gfm_destroy(B);
+     gfm_destroy(C1);
+     gfm_destroy(C2);
+    return 1;
+}
+
+int test_composition( )
 {
     hqsystem F, P;
     gfmatrix T, S;
@@ -216,6 +291,7 @@ int main( int argc, char ** argv )
 
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_csprng();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_matrix_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
 
     if( b == 1 )

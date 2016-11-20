@@ -4,7 +4,7 @@
 #include "csprng.h"
 
 #ifndef MOD
-#define MOD 61
+#define MOD 11
 #endif
 
 
@@ -50,6 +50,7 @@ int gfm_rowop( gfmatrix mat, unsigned short int destrow, unsigned short int sour
 int gfm_fliprows( gfmatrix mat, unsigned short int destrow, unsigned short int sourcerow );
 int gfm_scalerow( gfmatrix mat, unsigned short int rowidx, unsigned char constant );
 int gfm_redech( gfmatrix mat );
+int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel );
 
 int gfm_stack( gfmatrix dest, gfmatrix top, gfmatrix bottom );
 int gfm_cat( gfmatrix dest, gfmatrix left, gfmatrix right );

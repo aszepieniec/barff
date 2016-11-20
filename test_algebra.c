@@ -195,6 +195,113 @@ int test_multiply_transpose( )
     return 1;
 }
 
+int test_solve( )
+{
+    unsigned short int m, n;
+    unsigned int random;
+    gfmatrix A, b, b2, x, s, K, k, v;
+    csprng rng;
+    int success;
+
+    success = 1;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+    m = 10;
+    n = 11;
+
+    printf("testing matrix equation solver ... ");
+
+    A = gfm_init(m, n);
+    gfm_random(A, &rng);
+    b = gfm_init(m, 1);
+    x = gfm_init(n, 1);
+    gfm_random(x, &rng);
+    gfm_multiply(b, A, x);
+    gfm_zeros(x);
+
+
+    s = gfm_init(n, 1);
+    gfm_solve(A, b, s, &K);
+
+    k = gfm_init(n, 1);
+    if( K.width > 0 )
+    {
+        v = gfm_init(K.width, 1);
+        gfm_random(v, &rng);
+
+        gfm_multiply(k, K, v);
+
+        gfm_destroy(v);
+    }
+    else
+    {
+        gfm_zeros(k);
+    }
+
+
+    gfm_add(x, s, k);
+    b2 = gfm_init(m,1);
+    gfm_multiply(b2, A, x);
+
+    if( !gfm_equals(b, b2) )
+    {
+        printf("fail!\n");
+        printf("A:\n");
+        gfm_print(A);
+        printf("K:\n");
+        gfm_print(K);
+
+        printf("k^T: ");
+        gfm_print_transpose(k);
+        printf("b^T:  ");
+        gfm_print_transpose(b);
+        printf("b2^T: ");
+        gfm_print_transpose(b2);
+        printf("x: ");
+        gfm_print_transpose(x);
+        printf("random seed: %i\n", random);
+        success = 0;
+    }
+
+    gfm_random(b, &rng);
+    gfm_destroy(K);
+    if( gfm_solve(A, b, x, &K) )
+    {
+        gfm_multiply(b2, A, x);
+        if( !gfm_equals(b, b2) )
+        {
+            printf("fail!\n");
+            printf("Ax = b is supposed to have solution but --\n");
+            printf("x =  ");
+            gfm_print_transpose(x);
+            printf("b =  ");
+            gfm_print_transpose(b);
+            printf("Ax = ");
+            gfm_print_transpose(b2);
+            printf("random seed: %i\n", random);
+            success = 0;
+        }
+    }
+
+    if( success == 1 )
+    {
+        printf("success!\n");
+    }
+
+    gfm_destroy(A);
+    gfm_destroy(b);
+    gfm_destroy(b2);
+    gfm_destroy(K);
+    gfm_destroy(x);
+    gfm_destroy(s);
+    gfm_destroy(k);
+
+    return success;
+}
+
 int test_composition( )
 {
     hqsystem F, P;
@@ -292,6 +399,7 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_csprng();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_matrix_inverse();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_solve();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
 
     if( b == 1 )

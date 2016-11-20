@@ -109,17 +109,17 @@ int gfm_destroy( gfmatrix fm )
  * memory for the new object; you must do that yourself! (Or use
  * gfm_clone instead.)
  * @promise
- *  * dest.width <= source.width
- *  * dest.height <= source.height
+ *  * dest.width >= source.width
+ *  * dest.height >= source.height
  * @return
  *  * 1 if success
  */
 int gfm_copy( gfmatrix dest, gfmatrix source )
 {
     unsigned int i, j;
-    for( i = 0 ; i < dest.height ; ++i )
+    for( i = 0 ; i < source.height ; ++i )
     {
-        for( j = 0 ; j < dest.width ; ++j )
+        for( j = 0 ; j < source.width ; ++j )
         {
             dest.data[i*dest.width + j] = source.data[i*source.width + j];
         }
@@ -793,6 +793,143 @@ int gfm_redech( gfmatrix mat )
 
     return 1;
 }
+
+/**
+ * gfm_solve
+ * Solve a matrix equation of the form Ax = b for x up to a term in
+ * the kernel of A. This routine also initializes a kernel matrix,
+ * whose rows form a basis for the kernel of A.
+ * @params
+ *  * coeffs : a mxn gfmatrix object representing the coefficient
+ *    matrix A
+ *  * target : a mx1 gfmatrix object representing the b vector
+ *  * solution : a nx1 gfmatrix object to store one solution into
+ *  * kernel : an uninitialized gfmatrix object whose columns will
+ *    span the kernel of A
+ * @post
+ *  * for all kernel.width x 1 vectors "random" holds:
+ *          coeffs * (solution + kernel * random) = target
+ * @return
+ *  * 1 if success; 0 otherwise or if target is not in col span of
+ *    coefficient matrix
+ */
+int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel )
+{
+    /* declare variables for echelon reduction */
+    unsigned short int col, row, i, j;
+    unsigned char inv;
+    gfmatrix mat;
+
+    /* declare variables for pivot tracking */
+    unsigned short int *pivots;
+    unsigned short int *npivots;
+    unsigned short int num_pivots;
+    unsigned short int num_npivots;
+    int have_solution;
+
+    /* initialize variables for pivot tracking */
+    num_pivots = 0;
+    num_npivots = 0;
+    pivots = malloc(sizeof(unsigned short int) * (coeffs.width+1));
+    npivots = malloc(sizeof(unsigned short int) * (coeffs.width+1));
+
+    /* initialize mat and copy coeffs and target to it */
+    mat = gfm_init(coeffs.height, coeffs.width+1);
+    gfm_copy(mat, coeffs);
+    for( i = 0 ; i < coeffs.height ; ++i )
+    {
+        mat.data[i*mat.width + mat.width - 1] = target.data[i*target.width];
+    }
+
+    /* perform row echelon reduction */
+    row = 0;
+    for( col = 0 ; col < mat.width ; ++col )
+    {
+        for( i = row ; i < mat.height ; ++i )
+        {
+            if( mat.data[i*mat.width + col] != 0 )
+            {
+                if( i != row )
+                {
+                    gfm_fliprows(mat, i, row);
+                }
+                break;
+            }
+        }
+
+        if( i == mat.height )
+        {
+            /* non pivot */
+            npivots[num_npivots++] = col;
+            continue;
+        }
+
+        /* pivot */
+        pivots[num_pivots++] = col;
+
+        inv = gf_inverse(mat.data[row*mat.width + col]);
+        
+        if( inv != 1 )
+        {
+            gfm_scalerow(mat, row, inv);
+        }
+
+        for( i = 0 ; i < mat.height ; ++i )
+        {
+            if( i == row )
+            {
+                continue;
+            }
+            gfm_rowop(mat, i, row, (MOD - mat.data[i*mat.width + col]) % MOD, col);
+        }
+
+        row = row + 1;
+
+        if( row == mat.height )
+        {
+            for( i = col+1 ; i < mat.width ; ++i )
+            {
+                npivots[num_npivots++] = i;
+            }
+            break;
+        }
+    }
+
+
+    /* read out solution if the system is consistent */
+    have_solution = (pivots[num_pivots-1] != mat.width-1);
+    for( i = 0 ; i < mat.width-1 ; ++i )
+    {
+        solution.data[i*solution.width] = 0;
+    }
+    if( have_solution == 1 )
+    {
+    for( i = 0 ; i < num_pivots ; ++i )
+    {
+        solution.data[pivots[i]*solution.width] = mat.data[i*mat.width + mat.width - 1];
+    }
+    }
+
+    /* read out kernel */
+    *kernel = gfm_init(mat.width-1, num_npivots-1);
+    gfm_zeros(*kernel);
+    for( j = 0 ; j < num_npivots-1 ; ++j )
+    {
+        kernel->data[npivots[j]*kernel->width + j] = MOD - 1;
+        for( i = 0 ; i < num_pivots && pivots[i] < npivots[j] ; ++i )
+        {
+            kernel->data[pivots[i]*kernel->width + j] = mat.data[i*mat.width + npivots[j]];
+        }
+    }
+
+    /* free allocated memory */
+    gfm_destroy(mat);
+    free(pivots);
+    free(npivots);
+
+    return have_solution;
+}
+
 
 /**
  * gfm_stack

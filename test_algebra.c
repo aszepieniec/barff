@@ -73,11 +73,11 @@ int test_matrix_inverse( )
 {
     FILE * fh;
     csprng rng;
-    unsigned char buf1[10*10];
-    unsigned char buf2[10*10];
-    unsigned char buf3[10*10];
+    unsigned char buf1[10*10*sizeof(field_element)];
+    unsigned char buf2[10*10*sizeof(field_element)];
+    unsigned char buf3[10*10*sizeof(field_element)];
 
-    unsigned char randomness[10*10+1];
+    unsigned char randomness[10*10*sizeof(field_element)+1];
     char * prand;
     int invertible;
 
@@ -88,9 +88,9 @@ int test_matrix_inverse( )
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)&random);
 
-    A = gfm(10, 10, buf1);
-    B = gfm(10,10,buf2);
-    C = gfm(10,10,buf3);
+    A = gfm(10, 10, (field_element*)buf1);
+    B = gfm(10,10, (field_element*)buf2);
+    C = gfm(10,10, (field_element*)buf3);
 
 
     printf("testing matrix inverse ... ");

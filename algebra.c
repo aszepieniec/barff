@@ -42,7 +42,7 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
  * gf_inverse
  * Computes the multiplicative inverse of a field element.
  */
-unsigned char gf_inverse( unsigned char element )
+field_element gf_inverse( field_element element )
 {
     int a;
     int b;
@@ -59,7 +59,7 @@ unsigned char gf_inverse( unsigned char element )
  * gfm
  * Create gfmatrix object with given buffer.
  */
-gfmatrix gfm( unsigned short int height, unsigned short int width, unsigned char* pdata )
+gfmatrix gfm( unsigned  int height, unsigned  int width, field_element* pdata )
 {
     gfmatrix mat;
     mat.height = height;
@@ -72,12 +72,12 @@ gfmatrix gfm( unsigned short int height, unsigned short int width, unsigned char
  * gfm_init
  * Create a field matrix object and allocate space for it.
  */
-gfmatrix gfm_init( unsigned short int height, unsigned short int width )
+gfmatrix gfm_init( unsigned  int height, unsigned  int width )
 {
     gfmatrix mat;
     mat.width = width;
     mat.height = height;
-    mat.data = malloc(width*height);
+    mat.data = malloc(width*height*sizeof(field_element));
     /*
     printf("created gfm object with data member set to memory address %#010x\n", mat.data);
     */
@@ -151,7 +151,7 @@ gfmatrix gfm_clone( gfmatrix source )
  */
 int gfm_eye( gfmatrix eye )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     for( i = 0 ; i < eye.height ; ++i )
     {
         for( j = 0 ; j < eye.width ; ++j )
@@ -236,7 +236,7 @@ int gfm_equals( gfmatrix lhs, gfmatrix rhs )
  */
 int gfm_zeros( gfmatrix zero )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     for( i = 0 ; i < zero.height ; ++i )
     {
         for( j = 0 ; j < zero.width ; ++j )
@@ -260,12 +260,12 @@ int gfm_zeros( gfmatrix zero )
  */
 int gfm_random( gfmatrix random, csprng * rng )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     unsigned int l;
-    unsigned short int * randomness;
+    unsigned  int * randomness;
    
-    randomness = malloc(sizeof(unsigned short int) * random.width * random.height);
-    csprng_generate(rng, sizeof(unsigned short int) * random.height * random.width, (unsigned char *)randomness);
+    randomness = malloc(sizeof(unsigned  int) * random.width * random.height);
+    csprng_generate(rng, sizeof(unsigned  int) * random.height * random.width, (unsigned char*)randomness);
 
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
@@ -300,12 +300,12 @@ int gfm_random( gfmatrix random, csprng * rng )
  */
 int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     unsigned int l;
-    unsigned short int * randomness;
+    unsigned  int * randomness;
 
-    randomness = malloc(sizeof(unsigned short int) * random.height * random.width);
-    csprng_generate(rng, sizeof(unsigned short int) * random.height * random.width, (unsigned char *)randomness);
+    randomness = malloc(sizeof(unsigned  int) * random.height * random.width);
+    csprng_generate(rng, sizeof(unsigned  int) * random.height * random.width, (unsigned char*)randomness);
 
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
@@ -351,10 +351,10 @@ int gfm_random_invertible( gfmatrix mat, csprng * rng )
     unsigned int offset;
     unsigned int i;
 
-    unsigned short int * randomness;
+    unsigned  int * randomness;
 
-    randomness = malloc(sizeof(unsigned short int) * mat.height);
-    csprng_generate(rng, sizeof(unsigned short int) * mat.height, (unsigned char *)randomness);
+    randomness = malloc(sizeof(unsigned  int) * mat.height);
+    csprng_generate(rng, sizeof(unsigned  int) * mat.height, (unsigned char*)randomness);
 
 #ifdef DEBUG
     if( mat.height != mat.width )
@@ -396,8 +396,8 @@ int gfm_random_invertible( gfmatrix mat, csprng * rng )
  */
 int gfm_transpose( gfmatrix * trans )
 {
-    unsigned char a;
-    unsigned short int i, j;
+    field_element a;
+    unsigned  int i, j;
 
     gfmatrix T;
 
@@ -438,11 +438,11 @@ int gfm_transpose( gfmatrix * trans )
  * product requires two bytes and every 2^k additions requires k
  * extra bits. Since we have 16 bits to spare we have at most 2^16
  * additions which is anyway the max. height and width of matrices
- * that can be stored in a short unsigned int.
+ * that can be stored in a  unsigned int.
  */
 int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
 {
-    unsigned short int i, j, k;
+    unsigned  int i, j, k;
     unsigned int acc;
 
     #ifdef DEBUG
@@ -487,11 +487,11 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
  * product requires two bytes and every 2^k additions requires k
  * extra bits. Since we have 16 bits to spare we have at most 2^16
  * additions which is anyway the max. height and width of matrices
- * that can be stored in a short unsigned int.
+ * that can be stored in a  unsigned int.
  */
 int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
 {
-    unsigned short int i, j, k;
+    unsigned  int i, j, k;
     unsigned int acc;
 
     #ifdef DEBUG
@@ -536,11 +536,11 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
  * product requires two bytes and every 2^k additions requires k
  * extra bits. Since we have 16 bits to spare we have at most 2^16
  * additions which is anyway the max. height and width of matrices
- * that can be stored in a short unsigned int.
+ * that can be stored in a  unsigned int.
  */
 int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
 {
-    unsigned short int i, j, k;
+    unsigned  int i, j, k;
     unsigned int acc;
 
     #ifdef DEBUG
@@ -573,9 +573,9 @@ int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
  * @return
  *  * 1 if success
  */
-int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constant )
+int gfm_multiply_constant( gfmatrix dest, gfmatrix source, field_element constant )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
 
 #ifdef DEBUG
     if( dest.width != source.width || dest.height != source.height )
@@ -608,7 +608,7 @@ int gfm_multiply_constant( gfmatrix dest, gfmatrix source, unsigned char constan
  */
 int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
 
     #ifdef DEBUG
         if( dest.width != left.width || left.width != right.width || dest.height != left.height || left.height != right.height )
@@ -635,16 +635,16 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
  * a third one. This third matrix must be pre-allocated.
  * @params:
  *  * dest : the matrix object to store the result into
- *  * left_constant, right_constant : unsigned chars that represent
+ *  * left_constant, right_constant : field_elements that represent
  *    the field elements to weight the left and right matrices with
  *  * left_matrix, right_matrix : the two matrix objects to add
  *    together.
  * @return
  * 1 if success, 0 otherwise
  */
-int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_matrix, unsigned char right_constant, gfmatrix right_matrix )
+int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_matrix, field_element right_constant, gfmatrix right_matrix )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     unsigned int a;
 
     #ifdef DEBUG
@@ -673,15 +673,15 @@ int gfm_weighted_sum( gfmatrix dest, unsigned char left_constant, gfmatrix left_
  * weighted by a constant, to another.
  * @params
  *  * mat : the matrix object to operate on
- *  * destrow, sourcerow : unsigned short ints representing indices of the rows to operate on
- *  * constant : unsigned char representing the right constant
- *  * offset : unsigned short int, represents the number of zeros to skip before applying the row operation
+ *  * destrow, sourcerow : unsigned  ints representing indices of the rows to operate on
+ *  * constant : field_element representing the right constant
+ *  * offset : unsigned  int, represents the number of zeros to skip before applying the row operation
  * @returns
  *  * 1 if success
  */
-int gfm_rowop( gfmatrix mat, unsigned short int destrow, unsigned short int sourcerow, unsigned char constant, unsigned short int offset )
+int gfm_rowop( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow, field_element constant, unsigned  int offset )
 {
-    unsigned short int j;
+    unsigned  int j;
     for( j = offset ; j < mat.width ; ++j )
     {
         mat.data[destrow*mat.width + j] = (mat.data[destrow*mat.width + j] + mat.data[sourcerow*mat.width + j] * constant) % MOD;
@@ -696,14 +696,14 @@ int gfm_rowop( gfmatrix mat, unsigned short int destrow, unsigned short int sour
  * @params
  *  * mat : the matrix object to operate on
  *  * rowidx : index of the row to scale
- *  * constant : unsigned char -- the field element to multiply the
+ *  * constant : field_element -- the field element to multiply the
  *    row with
  * @returns
  *  * 1 if success, 0 otherwise
  */
-int gfm_scalerow( gfmatrix mat, unsigned short int rowidx, unsigned char constant )
+int gfm_scalerow( gfmatrix mat, unsigned  int rowidx, field_element constant )
 {
-    unsigned short int j;
+    unsigned  int j;
     for( j = 0 ; j < mat.width ; ++j )
     {
         mat.data[rowidx*mat.width + j] = (mat.data[rowidx*mat.width + j] * constant) % MOD;
@@ -720,10 +720,10 @@ int gfm_scalerow( gfmatrix mat, unsigned short int rowidx, unsigned char constan
  * @return
  *  * 1 if success
  */
-int gfm_fliprows( gfmatrix mat, unsigned short int destrow, unsigned short int sourcerow )
+int gfm_fliprows( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow )
 {
-    unsigned short int j;
-    unsigned char a;
+    unsigned  int j;
+    field_element a;
     for( j = 0 ; j < mat.width ; ++j )
     {
         a = mat.data[destrow*mat.width + j];
@@ -745,8 +745,8 @@ int gfm_fliprows( gfmatrix mat, unsigned short int destrow, unsigned short int s
  */
 int gfm_redech( gfmatrix mat )
 {
-    unsigned short int col, row, i;
-    unsigned char inv;
+    unsigned  int col, row, i;
+    field_element inv;
     row = 0;
     for( col = 0 ; col < mat.width ; ++col )
     {
@@ -816,22 +816,22 @@ int gfm_redech( gfmatrix mat )
 int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel )
 {
     /* declare variables for echelon reduction */
-    unsigned short int col, row, i, j;
-    unsigned char inv;
+    unsigned  int col, row, i, j;
+    field_element inv;
     gfmatrix mat;
 
     /* declare variables for pivot tracking */
-    unsigned short int *pivots;
-    unsigned short int *npivots;
-    unsigned short int num_pivots;
-    unsigned short int num_npivots;
+    unsigned  int *pivots;
+    unsigned  int *npivots;
+    unsigned  int num_pivots;
+    unsigned  int num_npivots;
     int have_solution;
 
     /* initialize variables for pivot tracking */
     num_pivots = 0;
     num_npivots = 0;
-    pivots = malloc(sizeof(unsigned short int) * (coeffs.width+1));
-    npivots = malloc(sizeof(unsigned short int) * (coeffs.width+1));
+    pivots = malloc(sizeof(unsigned  int) * (coeffs.width+1));
+    npivots = malloc(sizeof(unsigned  int) * (coeffs.width+1));
 
     /* initialize mat and copy coeffs and target to it */
     mat = gfm_init(coeffs.height, coeffs.width+1);
@@ -942,7 +942,7 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
  */
 int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
 
     #ifdef DEBUG
         if( mat.width != top.width || top.width != bottom.width || mat.height != top.height + bottom.height )
@@ -982,7 +982,7 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
  */
 int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
 
     #ifdef DEBUG
         if( res.height != left.height || left.height != right.height || res.width != left.width + right.width )
@@ -1018,9 +1018,9 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, unsigned short int col_start )
+int gfm_slice( gfmatrix dest, gfmatrix source, unsigned  int row_start, unsigned  int col_start )
 {
-    unsigned short int i, j;
+    unsigned  int i, j;
     #ifdef DEBUG
         if( source.width < col_start + dest.width || source.height < row_start + dest.height )
         {
@@ -1047,7 +1047,7 @@ int gfm_slice( gfmatrix dest, gfmatrix source, unsigned short int row_start, uns
 int gfm_inverse( gfmatrix inv, gfmatrix mat )
 {
     unsigned int i, j;
-    unsigned short int catwidth;
+    unsigned  int catwidth;
     int invertible;
     gfmatrix concat;
    
@@ -1137,7 +1137,7 @@ int gfm_print_transpose( gfmatrix mat )
  * Create homogeneous quadratic system object from a list of
  * of quadratic forms and the system's dimensions.
  */
-hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m )
+hqsystem hqs( gfmatrix* qfs, unsigned  int n, unsigned  int m )
 {
     hqsystem hqs;
     hqs.quadratic_forms = qfs;
@@ -1152,7 +1152,7 @@ hqsystem hqs( gfmatrix* qfs, unsigned short int n, unsigned short int m )
  * dimensions and allocates memory for it. Don't forget to call
  * hqs_destroy afterwards.
  */
-hqsystem hqs_init( unsigned short int n, unsigned short int m )
+hqsystem hqs_init( unsigned  int n, unsigned  int m )
 {
     unsigned int i;
     hqsystem hqs;
@@ -1161,7 +1161,7 @@ hqsystem hqs_init( unsigned short int n, unsigned short int m )
     hqs.quadratic_forms = malloc(sizeof(gfmatrix) * m);
     for( i = 0 ; i < m ; ++i )
     {
-        hqs.quadratic_forms[i].data = malloc(n*n);
+        hqs.quadratic_forms[i].data = malloc(n*n*sizeof(field_element));
         hqs.quadratic_forms[i].width = n;
         hqs.quadratic_forms[i].height = n;
     }
@@ -1245,10 +1245,10 @@ hqsystem hqs_copy_new( hqsystem source )
 int hqs_random( hqsystem sys, csprng * rng )
 {
     unsigned int i, j, k, l;
-    unsigned short int * randomness;
+    unsigned  int * randomness;
 
-    randomness = malloc(sizeof(unsigned short int) * sys.m * sys.n * sys.n);
-    csprng_generate(rng, sizeof(unsigned short int) * sys.m * sys.n * sys.n, (unsigned char *)randomness);
+    randomness = malloc(sizeof(unsigned  int) * sys.m * sys.n * sys.n);
+    csprng_generate(rng, sizeof(unsigned  int) * sys.m * sys.n * sys.n, (unsigned char*)randomness);
 
     l = 0;
     for( k = 0 ; k < sys.m ; ++k )
@@ -1381,7 +1381,7 @@ int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x )
 {
     unsigned int i, j, k;
     gfmatrix vector, transposed_vector, temp, e;
-    unsigned char edata;
+    field_element edata;
 
 #ifdef DEBUG
     if( y.height != sys.m || sys.n != x.height || y.width != x.width )

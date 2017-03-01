@@ -12,7 +12,7 @@ typedef struct
 
 int csprng_init( csprng* rng );
 int csprng_seed( csprng* rng, unsigned short int seed_length, unsigned char * seed );
-int csprng_generate( csprng* rng, unsigned short int buffer_length, unsigned char * buffer );
+int csprng_generate( csprng* rng, unsigned int buffer_length, unsigned char * buffer );
 
 #endif
 

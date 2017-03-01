@@ -326,7 +326,7 @@ int test_composition( )
 
     F = hqs_init(n, m);
     hqs_random(F, &rng);
-    P = hqs_copy_new(F);
+    P = hqs_clone(F);
 
 
 

@@ -60,7 +60,7 @@ int csprng_seed( csprng* rng, unsigned short int seed_length, unsigned char * se
  *  * buffer : the memory address to store the desired random bytes
  *    to
  */
-int csprng_generate( csprng* rng, unsigned short int buffer_length, unsigned char * buffer )
+int csprng_generate( csprng* rng, unsigned int buffer_length, unsigned char * buffer )
 {
     unsigned short int i, j;
 

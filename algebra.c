@@ -497,7 +497,7 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != rightT.height || left.width != rightT.width )
         {
-            printf("in gfm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
+            printf("in gfm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, rightT.height, rightT.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -810,8 +810,9 @@ int gfm_redech( gfmatrix mat )
  *  * for all kernel.width x 1 vectors "random" holds:
  *          coeffs * (solution + kernel * random) = target
  * @return
- *  * 1 if success; 0 otherwise or if target is not in col span of
- *    coefficient matrix
+ *  * r : int, which is equal up to sign to the rank of the kernel;
+ *    the sign is positive if the target is in the coefficient
+ *    matrix's column span.
  */
 int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel )
 {
@@ -835,10 +836,17 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
 
     /* initialize mat and copy coeffs and target to it */
     mat = gfm_init(coeffs.height, coeffs.width+1);
-    gfm_copy(mat, coeffs);
-    for( i = 0 ; i < coeffs.height ; ++i )
+    /*gfm_copy(mat, coeffs);*/
+    for( i = 0 ; i < mat.height ; ++i )
     {
-        mat.data[i*mat.width + mat.width - 1] = target.data[i*target.width];
+        for( j = 0 ; j < coeffs.width ; ++j )
+        {
+            mat.data[i*mat.width + j] = coeffs.data[i*coeffs.width + j];
+        }
+    }
+    for( i = 0 ; i < mat.height ; ++i )
+    {
+        mat.data[i*mat.width + mat.width - 1] = target.data[i*target.width + 0];
     }
 
     /* perform row echelon reduction */
@@ -893,8 +901,8 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
             }
             break;
         }
-    }
 
+    }
 
     /* read out solution if the system is consistent */
     have_solution = (pivots[num_pivots-1] != mat.width-1);
@@ -904,10 +912,10 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
     }
     if( have_solution == 1 )
     {
-    for( i = 0 ; i < num_pivots ; ++i )
-    {
-        solution.data[pivots[i]*solution.width] = mat.data[i*mat.width + mat.width - 1];
-    }
+        for( i = 0 ; i < num_pivots ; ++i )
+        {
+            solution.data[pivots[i]*solution.width] = mat.data[i*mat.width + mat.width - 1];
+        }
     }
 
     /* read out kernel */
@@ -927,7 +935,14 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
     free(pivots);
     free(npivots);
 
-    return have_solution;
+    if( have_solution == 1 )
+    {
+        return num_npivots-1;
+    }
+    else
+    {
+        return 1-num_npivots;
+    }
 }
 
 
@@ -1210,7 +1225,7 @@ int hqs_copy( hqsystem dest, hqsystem source )
 }
 
 /**
- * hqs_copy_new
+ * hqs_clone
  * Copy one homogeneous quadratic system to a new one. Remember to
  * destroy it when scope ends!
  * @params
@@ -1218,7 +1233,7 @@ int hqs_copy( hqsystem dest, hqsystem source )
  * @return
  *  * dest : a new homogeneous quadratic system identical to source
  */
-hqsystem hqs_copy_new( hqsystem source )
+hqsystem hqs_clone( hqsystem source )
 {
     hqsystem dest;
     dest = hqs_init(source.n, source.m);
@@ -1257,7 +1272,8 @@ int hqs_random( hqsystem sys, csprng * rng )
         {
             for( j = 0 ; j < sys.n ; ++j )
             {
-                sys.quadratic_forms[k].data[i*sys.n + j] = randomness[l++] % MOD;
+                sys.quadratic_forms[k].data[i*sys.n + j] = randomness[l] % MOD;
+                l++;
             }
         }
     }

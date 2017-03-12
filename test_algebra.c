@@ -73,35 +73,36 @@ int test_matrix_inverse( )
 {
     FILE * fh;
     csprng rng;
-    unsigned char buf1[10*10*sizeof(field_element)];
-    unsigned char buf2[10*10*sizeof(field_element)];
-    unsigned char buf3[10*10*sizeof(field_element)];
+    unsigned char buf1[10*10*sizeof(gfp_element)];
+    unsigned char buf2[10*10*sizeof(gfp_element)];
+    unsigned char buf3[10*10*sizeof(gfp_element)];
 
-    unsigned char randomness[10*10*sizeof(field_element)+1];
+    unsigned char randomness[10*10*sizeof(unsigned int)];
     char * prand;
     int invertible;
 
-    gfmatrix A, B, C;
+    gfpmatrix A, B, C;
 
     unsigned int random;
     random = rand();
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)&random);
 
-    A = gfm(10, 10, (field_element*)buf1);
-    B = gfm(10,10, (field_element*)buf2);
-    C = gfm(10,10, (field_element*)buf3);
+    A = gfpm(10, 10, (gfp_element*)buf1);
+    B = gfpm(10,10, (gfp_element*)buf2);
+    C = gfpm(10,10, (gfp_element*)buf3);
 
 
     printf("testing matrix inverse ... ");
 
-    gfm_random(A, &rng);
+    csprng_generate(&rng, sizeof(unsigned int)*10*10, randomness);
+    gfpm_random(A, randomness);
 
-    invertible = gfm_inverse(B, A);
+    invertible = gfpm_inverse(B, A);
 
-    gfm_multiply(C, A, B);
+    gfpm_multiply(C, A, B);
 
-    if( invertible == 0 || gfm_is_eye(C) )
+    if( invertible == 0 || gfpm_is_eye(C) )
     {
         printf("success!\n");
         return 1;
@@ -110,11 +111,11 @@ int test_matrix_inverse( )
     {
         printf("fail!\n");
         printf("A:\n");
-        gfm_print(A);
+        gfpm_print(A);
         printf("B:\n");
-        gfm_print(B);
+        gfpm_print(B);
         printf("C:\n");
-        gfm_print(C);
+        gfpm_print(C);
         printf("random seed: %u\n", random);
         return 0;
     }
@@ -122,10 +123,11 @@ int test_matrix_inverse( )
 
 int test_multiply_transpose( )
 {
-    gfmatrix A, B, C1, C2;
+    gfpmatrix A, B, C1, C2;
     unsigned short int n, m;
     csprng rng;
     unsigned int random;
+    unsigned char * randomness;
 
     random = rand();
     csprng_init(&rng);
@@ -136,62 +138,65 @@ int test_multiply_transpose( )
     m = 15;
     n = 10;
 
-    A = gfm_init(n, m);
-    B = gfm_init(n, m);
-     C1 = gfm_init(n, n);
-     C2 = gfm_init(n, n);
+    A = gfpm_init(n, m);
+    B = gfpm_init(n, m);
+    C1 = gfpm_init(n, n);
+    C2 = gfpm_init(n, n);
 
-    gfm_random(A, &rng);
-    gfm_random(B, &rng);
-
+    randomness = malloc(n*m*sizeof(unsigned int));
+    csprng_generate(&rng, n*m*sizeof(unsigned int), randomness);
+    gfpm_random(A, randomness);
+    csprng_generate(&rng, n*m*sizeof(unsigned int), randomness);
+    gfpm_random(B, randomness);
+    free(randomness);
     
-    gfm_multiply_transpose(C1, A, B);
-    gfm_transpose(&B);
-    gfm_multiply(C2, A, B);
-    gfm_transpose(&B);
+    gfpm_multiply_transpose(C1, A, B);
+    gfpm_transpose(&B);
+    gfpm_multiply(C2, A, B);
+    gfpm_transpose(&B);
 
-    if( !gfm_equals(C1, C2) )
+    if( !gfpm_equals(C1, C2) )
     {
         printf("fail!\n");
-        printf("C1 =/= C2 after gfm_multiply_transpose\n");
+        printf("C1 =/= C2 after gfpm_multiply_transpose\n");
         printf("rand seed: %i\n", random);
 
-        gfm_destroy(A);
-        gfm_destroy(B);
-         gfm_destroy(C1);
-         gfm_destroy(C2);
+        gfpm_destroy(A);
+        gfpm_destroy(B);
+         gfpm_destroy(C1);
+         gfpm_destroy(C2);
         return 0;
     }
     
-    gfm_destroy(C1);
-    gfm_destroy(C2);
-    C1 = gfm_init(m, m);
-    C2 = gfm_init(m, m);
+    gfpm_destroy(C1);
+    gfpm_destroy(C2);
+    C1 = gfpm_init(m, m);
+    C2 = gfpm_init(m, m);
 
-    gfm_transpose_multiply(C1, A, B);
-    gfm_transpose(&A);
-    gfm_multiply(C2, A, B);
-    gfm_transpose(&A);
+    gfpm_transpose_multiply(C1, A, B);
+    gfpm_transpose(&A);
+    gfpm_multiply(C2, A, B);
+    gfpm_transpose(&A);
 
-    if( !gfm_equals(C1, C2) )
+    if( !gfpm_equals(C1, C2) )
     {
         printf("fail!\n");
-        printf("C1 =/= C2 after gfm_transpose_multiply\n");
+        printf("C1 =/= C2 after gfpm_transpose_multiply\n");
         printf("rand seed: %i\n", random);
 
-        gfm_destroy(A);
-        gfm_destroy(B);
-         gfm_destroy(C1);
-         gfm_destroy(C2);
+        gfpm_destroy(A);
+        gfpm_destroy(B);
+         gfpm_destroy(C1);
+         gfpm_destroy(C2);
         return 0;
     }
 
     printf("success!\n");
 
-    gfm_destroy(A);
-    gfm_destroy(B);
-     gfm_destroy(C1);
-     gfm_destroy(C2);
+    gfpm_destroy(A);
+    gfpm_destroy(B);
+     gfpm_destroy(C1);
+     gfpm_destroy(C2);
     return 1;
 }
 
@@ -199,9 +204,10 @@ int test_solve( )
 {
     unsigned short int m, n;
     unsigned int random;
-    gfmatrix A, b, b2, x, s, K, k, v;
+    gfpmatrix A, b, b2, x, s, K, k, v;
     csprng rng;
     int success;
+    unsigned char * randomness;
 
     success = 1;
 
@@ -214,73 +220,86 @@ int test_solve( )
 
     printf("testing matrix equation solver ... ");
 
-    A = gfm_init(m, n);
-    gfm_random(A, &rng);
-    b = gfm_init(m, 1);
-    x = gfm_init(n, 1);
-    gfm_random(x, &rng);
-    gfm_multiply(b, A, x);
-    gfm_zeros(x);
+    A = gfpm_init(m, n);
+    randomness = malloc(m*n*sizeof(unsigned int));
+    csprng_generate(&rng, m*n*sizeof(unsigned int), randomness);
+    gfpm_random(A, randomness);
+    free(randomness);
+    b = gfpm_init(m, 1);
+    x = gfpm_init(n, 1);
+    
+    randomness = malloc(n*1*sizeof(unsigned int));
+    csprng_generate(&rng, n*1*sizeof(unsigned int), randomness);
+    gfpm_random(x, randomness);
+    free(randomness);
+    gfpm_multiply(b, A, x);
+    gfpm_zeros(x);
 
 
-    s = gfm_init(n, 1);
-    gfm_solve(A, b, s, &K);
+    s = gfpm_init(n, 1);
+    gfpm_solve(A, b, s, &K);
 
-    k = gfm_init(n, 1);
+    k = gfpm_init(n, 1);
     if( K.width > 0 )
     {
-        v = gfm_init(K.width, 1);
-        gfm_random(v, &rng);
+        v = gfpm_init(K.width, 1);
+        randomness = malloc(K.width*1*sizeof(unsigned int));
+        csprng_generate(&rng, K.width*1*sizeof(unsigned int), randomness);
+        gfpm_random(v, randomness);
+        free(randomness);
 
-        gfm_multiply(k, K, v);
+        gfpm_multiply(k, K, v);
 
-        gfm_destroy(v);
+        gfpm_destroy(v);
     }
     else
     {
-        gfm_zeros(k);
+        gfpm_zeros(k);
     }
 
 
-    gfm_add(x, s, k);
-    b2 = gfm_init(m,1);
-    gfm_multiply(b2, A, x);
+    gfpm_add(x, s, k);
+    b2 = gfpm_init(m,1);
+    gfpm_multiply(b2, A, x);
 
-    if( !gfm_equals(b, b2) )
+    if( !gfpm_equals(b, b2) )
     {
         printf("fail!\n");
         printf("A:\n");
-        gfm_print(A);
+        gfpm_print(A);
         printf("K:\n");
-        gfm_print(K);
+        gfpm_print(K);
 
         printf("k^T: ");
-        gfm_print_transpose(k);
+        gfpm_print_transpose(k);
         printf("b^T:  ");
-        gfm_print_transpose(b);
+        gfpm_print_transpose(b);
         printf("b2^T: ");
-        gfm_print_transpose(b2);
+        gfpm_print_transpose(b2);
         printf("x: ");
-        gfm_print_transpose(x);
+        gfpm_print_transpose(x);
         printf("random seed: %i\n", random);
         success = 0;
     }
 
-    gfm_random(b, &rng);
-    gfm_destroy(K);
-    if( gfm_solve(A, b, x, &K) )
+    randomness = malloc(b.height*b.width*sizeof(unsigned int));
+    csprng_generate(&rng, b.height*b.width*sizeof(unsigned int), randomness);
+    gfpm_random(b, randomness);
+    free(randomness);
+    gfpm_destroy(K);
+    if( gfpm_solve(A, b, x, &K) )
     {
-        gfm_multiply(b2, A, x);
-        if( !gfm_equals(b, b2) )
+        gfpm_multiply(b2, A, x);
+        if( !gfpm_equals(b, b2) )
         {
             printf("fail!\n");
             printf("Ax = b is supposed to have solution but --\n");
             printf("x =  ");
-            gfm_print_transpose(x);
+            gfpm_print_transpose(x);
             printf("b =  ");
-            gfm_print_transpose(b);
+            gfpm_print_transpose(b);
             printf("Ax = ");
-            gfm_print_transpose(b2);
+            gfpm_print_transpose(b2);
             printf("random seed: %i\n", random);
             success = 0;
         }
@@ -291,13 +310,13 @@ int test_solve( )
         printf("success!\n");
     }
 
-    gfm_destroy(A);
-    gfm_destroy(b);
-    gfm_destroy(b2);
-    gfm_destroy(K);
-    gfm_destroy(x);
-    gfm_destroy(s);
-    gfm_destroy(k);
+    gfpm_destroy(A);
+    gfpm_destroy(b);
+    gfpm_destroy(b2);
+    gfpm_destroy(K);
+    gfpm_destroy(x);
+    gfpm_destroy(s);
+    gfpm_destroy(k);
 
     return success;
 }
@@ -305,13 +324,14 @@ int test_solve( )
 int test_composition( )
 {
     hqsystem F, P;
-    gfmatrix T, S;
+    gfpmatrix T, S;
     unsigned short int m, n;
-    gfmatrix x, Sx, FoSx, ToFoSx, y;
+    gfpmatrix x, Sx, FoSx, ToFoSx, y;
     unsigned int i;
     int equal;
     csprng rng;
     unsigned int random;
+    unsigned char * randomness;
 
     random = rand();
     csprng_init(&rng);
@@ -325,55 +345,67 @@ int test_composition( )
     n = 15;
 
     F = hqs_init(n, m);
-    hqs_random(F, &rng);
+    randomness = malloc(sizeof(unsigned int) * m * n * n);
+    csprng_generate(&rng, sizeof(unsigned int) * m * n * n, randomness);
+    hqs_random(F, randomness);
+    free(randomness);
     P = hqs_clone(F);
+    
 
 
+    T = gfpm_init(m, m);
+    S = gfpm_init(n, n);
 
-    T = gfm_init(m, m);
-    S = gfm_init(n, n);
 
-
-    gfm_random_invertible(T, &rng);
-    gfm_random_invertible(S, &rng);
+    randomness = malloc(sizeof(unsigned int) * m * m);
+    csprng_generate(&rng, sizeof(unsigned int) * m * m, randomness);
+    gfpm_random_invertible(T, randomness);
+    free(randomness);
+    randomness = malloc(sizeof(unsigned int) * n * n);
+    csprng_generate(&rng, sizeof(unsigned int) * n * n, randomness);
+    gfpm_random_invertible(S, randomness);
+    free(randomness);
 
 
     hqs_compose_output(T, P);
     hqs_compose_input(P, S);
 
 
-    x = gfm_init(n, 1);
-    y = gfm_init(m, 1);
-    Sx = gfm_init(n, 1);
-    FoSx = gfm_init(m, 1);
-    ToFoSx = gfm_init(m, 1);
+    x = gfpm_init(n, 1);
+    y = gfpm_init(m, 1);
+    Sx = gfpm_init(n, 1);
+    FoSx = gfpm_init(m, 1);
+    ToFoSx = gfpm_init(m, 1);
 
 
     equal = 1;
     for( i = 0 ; i < 1 && equal == 1 ; ++i )
     {
-        gfm_random(x, &rng);
+        randomness = malloc(sizeof(unsigned int) * x.height * x.width);
+        csprng_generate(&rng, sizeof(unsigned int) * x.height * x.width, randomness);
+        gfpm_random(x, randomness);
+        free(randomness);
 
-        gfm_multiply(Sx, S, x);
+        gfpm_multiply(Sx, S, x);
 
         hqs_eval(FoSx, F, Sx);
 
-        gfm_multiply(ToFoSx, T, FoSx);
+        gfpm_multiply(ToFoSx, T, FoSx);
 
         hqs_eval(y, P, x);
 
-        equal = gfm_equals(y, ToFoSx);
+        equal = gfpm_equals(y, ToFoSx);
     }
 
-    gfm_destroy(x);
-    gfm_destroy(y);
-    gfm_destroy(Sx);
-    gfm_destroy(FoSx);
-    gfm_destroy(ToFoSx);
+    gfpm_destroy(x);
+    gfpm_destroy(y);
+    gfpm_destroy(Sx);
+    gfpm_destroy(FoSx);
+    gfpm_destroy(ToFoSx);
     hqs_destroy(F);
     hqs_destroy(P);
-    gfm_destroy(T);
-    gfm_destroy(S);
+    gfpm_destroy(T);
+    gfpm_destroy(S);
 
     if( equal )
     {

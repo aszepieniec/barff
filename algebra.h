@@ -1,19 +1,17 @@
 #ifndef ALGEBRA_H
 #define ALGEBRA_H
 
-#include "csprng.h"
-
-#ifndef MOD
-#define MOD 199
+#ifndef GF_PRIME_MODULUS
+#define GF_PRIME_MODULUS 3
 #endif
 
-typedef unsigned short int field_element;
+typedef unsigned char gfp_element;
 
 /**
  * finite field arithmetic
  */
 int xgcd( int x, int y, int* a, int* b, int* c );
-field_element gf_inverse( field_element element );
+gfp_element gf_inverse( gfp_element element );
 
 /**
  * matrix 
@@ -23,43 +21,44 @@ typedef struct
 {
     unsigned  int width;
     unsigned  int height;
-    field_element * data;
-} gfmatrix;
+    gfp_element * data;
+} gfpmatrix;
 
-gfmatrix gfm( unsigned  int height, unsigned  int width, field_element * pdata );
+gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element * pdata );
 
-gfmatrix gfm_init( unsigned  int height, unsigned  int width );
-int gfm_destroy( gfmatrix fm );
-int gfm_copy( gfmatrix dest, gfmatrix source );
-gfmatrix gfm_clone( gfmatrix source );
+gfpmatrix gfpm_init( unsigned  int height, unsigned  int width );
+int gfpm_destroy( gfpmatrix fm );
+int gfpm_copy( gfpmatrix dest, gfpmatrix source );
+gfpmatrix gfpm_clone( gfpmatrix source );
 
-int gfm_eye( gfmatrix mat );
-int gfm_is_eye( gfmatrix mat );
-int gfm_equals( gfmatrix lhs, gfmatrix rhs );
-int gfm_zeros( gfmatrix mat );
-int gfm_random( gfmatrix mat, csprng * rng );
-int gfm_random_upper_triangular( gfmatrix mat, csprng * rng  );
-int gfm_random_invertible( gfmatrix mat, csprng * rng  );
-int gfm_transpose( gfmatrix * mat );
-int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right );
-int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT );
-int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right );
-int gfm_multiply_constant( gfmatrix dest, gfmatrix source, field_element constant );
-int gfm_sum( gfmatrix dest, gfmatrix left_matrix, gfmatrix right_matrix );
-int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_matrix, field_element right_constant, gfmatrix right_matrix );
-int gfm_rowop( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow, field_element constant, unsigned  int offset );
-int gfm_fliprows( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow );
-int gfm_scalerow( gfmatrix mat, unsigned  int rowidx, field_element constant );
-int gfm_redech( gfmatrix mat );
-int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel );
+int gfpm_eye( gfpmatrix mat );
+int gfpm_is_eye( gfpmatrix mat );
+int gfpm_equals( gfpmatrix lhs, gfpmatrix rhs );
+int gfpm_zeros( gfpmatrix mat );
+int gfpm_random( gfpmatrix mat, unsigned char * randomness );
+int gfpm_random_upper_triangular( gfpmatrix mat, unsigned char * randomness  );
+int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness  );
+int gfpm_transpose( gfpmatrix * mat );
+int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right );
+int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT );
+int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right );
+int gfpm_multiply_constant( gfpmatrix dest, gfpmatrix source, gfp_element constant );
+int gfpm_sum( gfpmatrix dest, gfpmatrix left_matrix, gfpmatrix right_matrix );
+int gfpm_weighted_sum( gfpmatrix dest, gfp_element left_constant, gfpmatrix left_matrix, gfp_element right_constant, gfpmatrix right_matrix );
+int gfpm_rowop( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow, gfp_element constant, unsigned  int offset );
+int gfpm_fliprows( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow );
+int gfpm_scalerow( gfpmatrix mat, unsigned  int rowidx, gfp_element constant );
+int gfpm_redech( gfpmatrix mat );
+int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatrix * kernel );
+int gfpm_inspan( gfpmatrix vec, gfpmatrix mat );
 
-int gfm_stack( gfmatrix dest, gfmatrix top, gfmatrix bottom );
-int gfm_cat( gfmatrix dest, gfmatrix left, gfmatrix right );
-int gfm_slice( gfmatrix dest, gfmatrix mat, unsigned  int row_start, unsigned  int col_start );
+int gfpm_stack( gfpmatrix dest, gfpmatrix top, gfpmatrix bottom );
+int gfpm_cat( gfpmatrix dest, gfpmatrix left, gfpmatrix right );
+int gfpm_slice( gfpmatrix dest, gfpmatrix mat, unsigned  int row_start, unsigned  int col_start );
 
-int gfm_inverse( gfmatrix dest, gfmatrix mat );
+int gfpm_inverse( gfpmatrix dest, gfpmatrix mat );
 
-int gfm_print( gfmatrix mat );
+int gfpm_print( gfpmatrix mat );
 
 /**
  * univariate polynomials
@@ -68,7 +67,7 @@ int gfm_print( gfmatrix mat );
 typedef struct
 {
     unsigned  int degree;
-    field_element * data;
+    gfp_element * data;
 } gfpolynomial;
 
 /**
@@ -76,20 +75,20 @@ typedef struct
  */
 typedef struct
 {
-    gfmatrix * quadratic_forms;
+    gfpmatrix * quadratic_forms;
     unsigned  int n;
     unsigned  int m;
 } hqsystem;
 
-hqsystem hqs( gfmatrix* qfs, unsigned  int n, unsigned  int m );
+hqsystem hqs( gfpmatrix* qfs, unsigned  int n, unsigned  int m );
 hqsystem hqs_init( unsigned  int n, unsigned  int m );
 int hqs_destroy( hqsystem sys );
-int hqs_random( hqsystem sys, csprng * rng );
+int hqs_random( hqsystem sys, unsigned char * randomness );
 int hqs_copy( hqsystem dest, hqsystem source );
-hqsystem hqs_copy_new( hqsystem source );
-int hqs_compose_output( gfmatrix T, hqsystem P );
-int hqs_compose_input( hqsystem P, gfmatrix S );
-int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x );
+hqsystem hqs_clone( hqsystem source );
+int hqs_compose_output( gfpmatrix T, hqsystem P );
+int hqs_compose_input( hqsystem P, gfpmatrix S );
+int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x );
 
 #endif
 

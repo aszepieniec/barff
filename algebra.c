@@ -42,26 +42,26 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
  * gf_inverse
  * Computes the multiplicative inverse of a field element.
  */
-field_element gf_inverse( field_element element )
+gfp_element gf_inverse( gfp_element element )
 {
     int a;
     int b;
     int x, y, g;
 
     a = element;
-    b = MOD;
+    b = GF_PRIME_MODULUS;
     xgcd(a, b, &x, &y, &g);
-    x = (MOD + (x % MOD)) % MOD;
+    x = (GF_PRIME_MODULUS + (x % GF_PRIME_MODULUS)) % GF_PRIME_MODULUS;
     return x;
 }
 
 /**
- * gfm
- * Create gfmatrix object with given buffer.
+ * gfpm
+ * Create gfpmatrix object with given buffer.
  */
-gfmatrix gfm( unsigned  int height, unsigned  int width, field_element* pdata )
+gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element* pdata )
 {
-    gfmatrix mat;
+    gfpmatrix mat;
     mat.height = height;
     mat.width = width;
     mat.data = pdata;
@@ -69,33 +69,33 @@ gfmatrix gfm( unsigned  int height, unsigned  int width, field_element* pdata )
 }
 
 /**
- * gfm_init
+ * gfpm_init
  * Create a field matrix object and allocate space for it.
  */
-gfmatrix gfm_init( unsigned  int height, unsigned  int width )
+gfpmatrix gfpm_init( unsigned  int height, unsigned  int width )
 {
-    gfmatrix mat;
+    gfpmatrix mat;
     mat.width = width;
     mat.height = height;
-    mat.data = malloc(width*height*sizeof(field_element));
+    mat.data = malloc(width*height*sizeof(gfp_element));
     /*
-    printf("created gfm object with data member set to memory address %#010x\n", mat.data);
+    printf("created gfpm object with data member set to memory address %#010x\n", mat.data);
     */
     return mat;
 }
 
 /**
- * gfm_destroy
+ * gfpm_destroy
  * Deallocates space allocated to a field matrix object. Call this
  * function before closing the scope where the field matrix object
  * was initialized.
  * @return
  *  * 1 if success
  */
-int gfm_destroy( gfmatrix fm )
+int gfpm_destroy( gfpmatrix fm )
 {
     /*
-    printf("destroying gfm object with data member set to memory address %#010x\n", fm.data);
+    printf("destroying gfpm object with data member set to memory address %#010x\n", fm.data);
     */
     free(fm.data);
     fm.width = 0;
@@ -104,17 +104,17 @@ int gfm_destroy( gfmatrix fm )
 }
 
 /**
- * gfm_copy
+ * gfpm_copy
  * Copy the contents of one matrix to another. Does not allocate
  * memory for the new object; you must do that yourself! (Or use
- * gfm_clone instead.)
+ * gfpm_clone instead.)
  * @promise
  *  * dest.width >= source.width
  *  * dest.height >= source.height
  * @return
  *  * 1 if success
  */
-int gfm_copy( gfmatrix dest, gfmatrix source )
+int gfpm_copy( gfpmatrix dest, gfpmatrix source )
 {
     unsigned int i, j;
     for( i = 0 ; i < source.height ; ++i )
@@ -129,27 +129,27 @@ int gfm_copy( gfmatrix dest, gfmatrix source )
 }
 
 /**
- * gfm_clone
+ * gfpm_clone
  * Copy one matrix into a new object. Don't forget to call
- * gfm_destroy at the end of scope!
+ * gfpm_destroy at the end of scope!
  */
-gfmatrix gfm_clone( gfmatrix source )
+gfpmatrix gfpm_clone( gfpmatrix source )
 {
-    gfmatrix mat;
-    mat = gfm_init(source.height, source.width);
-    gfm_copy(mat, source);
+    gfpmatrix mat;
+    mat = gfpm_init(source.height, source.width);
+    gfpm_copy(mat, source);
     return mat;
 }
 
 /**
- * gfm_eye
+ * gfpm_eye
  * Set a matrix to the identity matrix.
  * @param
  *  * eye : matrix object to set to identity
  * @returns
  *  * 1 if success, 0 otherwise
  */
-int gfm_eye( gfmatrix eye )
+int gfpm_eye( gfpmatrix eye )
 {
     unsigned  int i, j;
     for( i = 0 ; i < eye.height ; ++i )
@@ -170,7 +170,7 @@ int gfm_eye( gfmatrix eye )
  * @return
  *  * 1 if identity, 0 otherwise
  */
-int gfm_is_eye( gfmatrix eye )
+int gfpm_is_eye( gfpmatrix eye )
 {
     unsigned int i, j;
     int b = 1;
@@ -199,12 +199,12 @@ int gfm_is_eye( gfmatrix eye )
 }
 
 /**
- * gfm_equals
+ * gfpm_equals
  * Test two matrices for equality.
  * @return
  *  * 1 if equal, 0 otherwise
  */
-int gfm_equals( gfmatrix lhs, gfmatrix rhs )
+int gfpm_equals( gfpmatrix lhs, gfpmatrix rhs )
 {
     unsigned int i, j;
     int b;
@@ -227,14 +227,14 @@ int gfm_equals( gfmatrix lhs, gfmatrix rhs )
 }
 
 /**
- * gfm_zero
+ * gfpm_zero
  * Sets a matrix to all zeros.
  * @param
  *  * zero : matrix object to set to zero
  * @returns
  *  * 1 if success
  */
-int gfm_zeros( gfmatrix zero )
+int gfpm_zeros( gfpmatrix zero )
 {
     unsigned  int i, j;
     for( i = 0 ; i < zero.height ; ++i )
@@ -248,41 +248,36 @@ int gfm_zeros( gfmatrix zero )
 }
 
 /**
- * gfm_random
+ * gfpm_random
  * Put random values into the matrix.
  * @params
  *  * random : matrix objects with data already allocated and whose
  *    elements are to be assigned random values
- *  * rng : pointer to the csprng object from which to draw the
- *    random numbers
+ *  * randomness : pointer to large-enough string of random bytes
+ *    "large enough" means n*n*sizeof(unsigned int)
  * @result
  *  * random <-$- matrix_space(random.height, random.width)
  */
-int gfm_random( gfmatrix random, csprng * rng )
+int gfpm_random( gfpmatrix random, unsigned char * randomness )
 {
     unsigned  int i, j;
     unsigned int l;
-    unsigned  int * randomness;
+    unsigned int * rand = (unsigned int *)randomness;
    
-    randomness = malloc(sizeof(unsigned  int) * random.width * random.height);
-    csprng_generate(rng, sizeof(unsigned  int) * random.height * random.width, (unsigned char*)randomness);
-
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
         for( j = 0 ; j < random.width ; ++j )
         {
-            random.data[i*random.width + j] = randomness[l++] % MOD;
+            random.data[i*random.width + j] = rand[l++] % GF_PRIME_MODULUS;
         }
     }
-
-    free(randomness);
 
     return 1;
 }
 
 /**
- * gfm_random_upper_triangular
+ * gfpm_random_upper_triangular
  * Set the matrix to a random upper triangular with ones on the
  * diagonal.
  * @params
@@ -290,44 +285,39 @@ int gfm_random( gfmatrix random, csprng * rng )
  *    elements above the diagonal are to be assigned random values;
  *    whereas the elements above the diagonal are to be 0 and the
  *    elements on the diagonal are to be 1.
- *  * rng : pointer to the csprng object from which to draw the
- *    random numbers
+ *  * randomness : pointer to large-enough string of random bytes
+ *    "large enough" means n*(n-1)/2*sizeof(unsigned int)
  * @result
  *  * random <-$- matrix_space(random.height, random.width)
  *    subject to
  *    forall i . random[i,i] = 1
  *    forall i, j>i . random[i,j] = 0
  */
-int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
+int gfpm_random_upper_triangular( gfpmatrix random, unsigned char * randomness )
 {
     unsigned  int i, j;
     unsigned int l;
-    unsigned  int * randomness;
-
-    randomness = malloc(sizeof(unsigned  int) * random.height * random.width);
-    csprng_generate(rng, sizeof(unsigned  int) * random.height * random.width, (unsigned char*)randomness);
+    unsigned  int * rand = (unsigned int *)randomness;
 
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
         for( j = 0 ; j < i ; ++j )
         {
-            random.data[i*random.width + j] = randomness[l++] % MOD;
+            random.data[i*random.width + j] = rand[l++] % GF_PRIME_MODULUS;
         }
         random.data[i*random.width + i] = 1;
         for( j = i+1 ; j < random.width ; ++j )
         {
-            random.data[i*random.width + j] = randomness[l++] % MOD;
+            random.data[i*random.width + j] = 0;
         }
     }
-
-    free(randomness);
 
     return 1;
 }
 
 /**
- * gfm_random_invertible
+ * gfpm_random_invertible
  * Generate a random invertible matrix. This is accomplished by first
  * generating two random triangular matrices, where one has ones on
  * the diagonal is upper-triangular and the other has random nonzero
@@ -336,8 +326,8 @@ int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
  * @params
  *  * mat : the matrix object in which to store the generated random
  *    invertible matrix
- *  * rng : a pointer to the csprng object to generate the random
- *    numbers from
+ *  * randomness : pointer to large enough string of random bytes
+ *    "large enough" means n*n*sizeof(unsigned int)
  * @pre
  *  * mat.height = mat.width
  * @result
@@ -345,64 +335,59 @@ int gfm_random_upper_triangular( gfmatrix random, csprng * rng )
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_random_invertible( gfmatrix mat, csprng * rng )
+int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness )
 {
-    gfmatrix utm, ltm;
+    gfpmatrix utm, ltm;
     unsigned int offset;
     unsigned int i;
 
-    unsigned  int * randomness;
-
-    randomness = malloc(sizeof(unsigned  int) * mat.height);
-    csprng_generate(rng, sizeof(unsigned  int) * mat.height, (unsigned char*)randomness);
+    unsigned  int * rand = (unsigned int *) randomness;
 
 #ifdef DEBUG
     if( mat.height != mat.width )
     {
-        printf("gfm_random_invertible: cannot generate random invertible matrix because matrix not square! %ix%i\n", mat.height, mat.width);
+        printf("gfpm_random_invertible: cannot generate random invertible matrix because matrix not square! %ix%i\n", mat.height, mat.width);
         return 0;
     }
 #endif
 
-    utm = gfm_init(mat.height, mat.width);
-    ltm = gfm_init(mat.height, mat.width);
+    utm = gfpm_init(mat.height, mat.width);
+    ltm = gfpm_init(mat.height, mat.width);
 
     /* generate triangular matrices with ones on the diagonal */
-    gfm_random_upper_triangular(utm, rng);
-    gfm_random_upper_triangular(ltm, rng);
-    gfm_transpose(&ltm);
+    gfpm_random_upper_triangular(utm, randomness);
+    gfpm_random_upper_triangular(ltm, randomness + sizeof(unsigned int)*(mat.height * (mat.width-1))/2);
+    gfpm_transpose(&ltm);
 
     /* set the diagonal elements of one matrix to random nonzero
      * elements */
     for( i = 0 ; i < utm.height ; ++i )
     {
-        utm.data[i*utm.width + i] = 1 + (randomness[i] % (MOD - 1));
+        utm.data[i*utm.width + i] = 1 + (rand[i + mat.height * (mat.width-1)] % (GF_PRIME_MODULUS - 1));
     }
 
     /* multiply L * U to get the random invertible matrix */
-    gfm_multiply(mat, ltm, utm);
+    gfpm_multiply(mat, ltm, utm);
 
-    gfm_destroy(ltm);
-    gfm_destroy(utm);
-
-    free(randomness);
+    gfpm_destroy(ltm);
+    gfpm_destroy(utm);
 
     return 1;
 }
 
 /**
- * gfm_transpose_square
+ * gfpm_transpose_square
  * Perform a matrix transposition in situ.
  */
-int gfm_transpose( gfmatrix * trans )
+int gfpm_transpose( gfpmatrix * trans )
 {
-    field_element a;
+    gfp_element a;
     unsigned  int i, j;
 
-    gfmatrix T;
+    gfpmatrix T;
 
-    T = gfm_init(trans->height, trans->width);
-    gfm_copy(T, *trans);
+    T = gfpm_init(trans->height, trans->width);
+    gfpm_copy(T, *trans);
 
     a = trans->width;
     trans->width = trans->height;
@@ -416,13 +401,13 @@ int gfm_transpose( gfmatrix * trans )
         }
     }
 
-    gfm_destroy(T);
+    gfpm_destroy(T);
 
     return 1;
 }
 
 /**
- * gfm_multiply
+ * gfpm_multiply
  * Multiplies two matrices and stores the result in the third, which
  * should be pre-allocated.
  * @params
@@ -440,7 +425,7 @@ int gfm_transpose( gfmatrix * trans )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
+int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
 {
     unsigned  int i, j, k;
     unsigned int acc;
@@ -448,7 +433,7 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != right.width || left.width != right.height )
         {
-            printf("in gfm_multiply: trying to multiply matrices with unmatched dimensions: %ix%i * %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
+            printf("in gfpm_multiply: trying to multiply matrices with unmatched dimensions: %ix%i * %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -462,7 +447,7 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
             {
                 acc = acc + left.data[i*left.width + k] * right.data[k*right.width + j];
             }
-            dest.data[i*dest.width + j] = acc % MOD;
+            dest.data[i*dest.width + j] = acc % GF_PRIME_MODULUS;
         }
     }
 
@@ -470,7 +455,7 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
 }
 
 /**
- * gfm_multiply_transpose
+ * gfpm_multiply_transpose
  * Multiplies the left hand side matrix with the transpose of the
  * hand side matrix and stores the result in the third, which
  * should be pre-allocated.
@@ -489,7 +474,7 @@ int gfm_multiply( gfmatrix dest, gfmatrix left, gfmatrix right )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
+int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
 {
     unsigned  int i, j, k;
     unsigned int acc;
@@ -497,7 +482,7 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != rightT.height || left.width != rightT.width )
         {
-            printf("in gfm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, rightT.height, rightT.width, dest.height, dest.width);
+            printf("in gfpm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, rightT.height, rightT.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -511,7 +496,7 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
             {
                 acc = acc + left.data[i*left.width + k] * rightT.data[j*rightT.width + k];
             }
-            dest.data[i*dest.width + j] = acc % MOD;
+            dest.data[i*dest.width + j] = acc % GF_PRIME_MODULUS;
         }
     }
 
@@ -519,7 +504,7 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
 }
 
 /**
- * gfm_transpose_multiply
+ * gfpm_transpose_multiply
  * Multiplies the transpose of the left hand side matrix with the
  * hand side matrix and stores the result in the third, which
  * should be pre-allocated.
@@ -538,7 +523,7 @@ int gfm_multiply_transpose( gfmatrix dest, gfmatrix left, gfmatrix rightT )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
+int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
 {
     unsigned  int i, j, k;
     unsigned int acc;
@@ -546,7 +531,7 @@ int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
     #ifdef DEBUG
         if( dest.height != leftT.width || dest.width != right.width || leftT.height != right.height )
         {
-            printf("in gfm_transpose_multiply: trying to multiply matrices with unmatched dimensions: (%ix%i)^T * %ix%i = %ix%i\n", leftT.height, leftT.width, right.height, right.width, dest.height, dest.width);
+            printf("in gfpm_transpose_multiply: trying to multiply matrices with unmatched dimensions: (%ix%i)^T * %ix%i = %ix%i\n", leftT.height, leftT.width, right.height, right.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -560,7 +545,7 @@ int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
             {
                 acc = acc + leftT.data[k*leftT.width + i] * right.data[k*right.width + j];
             }
-            dest.data[i*dest.width + j] = acc % MOD;
+            dest.data[i*dest.width + j] = acc % GF_PRIME_MODULUS;
         }
     }
 
@@ -568,19 +553,19 @@ int gfm_transpose_multiply( gfmatrix dest, gfmatrix leftT, gfmatrix right )
 }
 
 /**
- * gfm_multiply_constant
+ * gfpm_multiply_constant
  * Multiply the matrix with a constant.
  * @return
  *  * 1 if success
  */
-int gfm_multiply_constant( gfmatrix dest, gfmatrix source, field_element constant )
+int gfpm_multiply_constant( gfpmatrix dest, gfpmatrix source, gfp_element constant )
 {
     unsigned  int i, j;
 
 #ifdef DEBUG
     if( dest.width != source.width || dest.height != source.height )
     {
-        printf("gfm_multiply_constant: cannot multiply matrix with constant because dimensions of destination do not match those of source! %ix%i <- %ix%i\n", dest.height, dest.width, source.height, source.width);
+        printf("gfpm_multiply_constant: cannot multiply matrix with constant because dimensions of destination do not match those of source! %ix%i <- %ix%i\n", dest.height, dest.width, source.height, source.width);
         return 0;
     }
 #endif
@@ -589,14 +574,14 @@ int gfm_multiply_constant( gfmatrix dest, gfmatrix source, field_element constan
     {
         for( j = 0 ; j < dest.width ; ++j )
         {
-            dest.data[i*dest.width + j] = (source.data[i*dest.width + j] * constant) % MOD;
+            dest.data[i*dest.width + j] = (source.data[i*dest.width + j] * constant) % GF_PRIME_MODULUS;
         }
     }
     return 1;
 }
 
 /**
- * gfm_add
+ * gfpm_add
  * Add one matrix to another and store the result in a third. The
  * third matrix must be preallocated.
  * @params
@@ -606,14 +591,14 @@ int gfm_multiply_constant( gfmatrix dest, gfmatrix source, field_element constan
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
+int gfpm_add( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
 {
     unsigned  int i, j;
 
     #ifdef DEBUG
         if( dest.width != left.width || left.width != right.width || dest.height != left.height || left.height != right.height )
         {
-            printf("in gfm_add: trying to add matrices of incompatible dimensions! %ix%i + %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
+            printf("in gfpm_add: trying to add matrices of incompatible dimensions! %ix%i + %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -622,7 +607,7 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
     {
         for( j = 0 ; j < dest.width ; ++j )
         {
-            dest.data[i*dest.width + j] = (left.data[i*left.width + j] + right.data[i*right.width + j]) % MOD;
+            dest.data[i*dest.width + j] = (left.data[i*left.width + j] + right.data[i*right.width + j]) % GF_PRIME_MODULUS;
         }
     }
 
@@ -630,19 +615,19 @@ int gfm_add( gfmatrix dest, gfmatrix left, gfmatrix right )
 }
 
 /**
- * gfm_weighted_sum
+ * gfpm_weighted_sum
  * Compute the weighted sum of two matrices, and store the result in
  * a third one. This third matrix must be pre-allocated.
  * @params:
  *  * dest : the matrix object to store the result into
- *  * left_constant, right_constant : field_elements that represent
+ *  * left_constant, right_constant : gfp_elements that represent
  *    the field elements to weight the left and right matrices with
  *  * left_matrix, right_matrix : the two matrix objects to add
  *    together.
  * @return
  * 1 if success, 0 otherwise
  */
-int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_matrix, field_element right_constant, gfmatrix right_matrix )
+int gfpm_weighted_sum( gfpmatrix dest, gfp_element left_constant, gfpmatrix left_matrix, gfp_element right_constant, gfpmatrix right_matrix )
 {
     unsigned  int i, j;
     unsigned int a;
@@ -650,7 +635,7 @@ int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_
     #ifdef DEBUG
         if( dest.width != left_matrix.width || left_matrix.width != right_matrix.width || dest.height != left_matrix.height || left_matrix.height != right_matrix.height )
         {
-            printf("in gfm_weighted_sum: trying to add matrices of incompatible dimensions! %ix%i + %ix%i = %ix%i\n", left_matrix.height, left_matrix.width, right_matrix.height, right_matrix.width, dest.height, dest.width);
+            printf("in gfpm_weighted_sum: trying to add matrices of incompatible dimensions! %ix%i + %ix%i = %ix%i\n", left_matrix.height, left_matrix.width, right_matrix.height, right_matrix.width, dest.height, dest.width);
             return 0;
         }
     #endif
@@ -660,7 +645,7 @@ int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_
         for( j = 0 ; j < dest.width ; ++j )
         {
             a = left_matrix.data[i*left_matrix.width + j] * left_constant + right_matrix.data[i*right_matrix.width + j] * right_constant;
-            dest.data[i*dest.width + j] = a % MOD;
+            dest.data[i*dest.width + j] = a % GF_PRIME_MODULUS;
         }
     }
 
@@ -668,51 +653,51 @@ int gfm_weighted_sum( gfmatrix dest, field_element left_constant, gfmatrix left_
 }
 
 /**
- * gfm_rowop
+ * gfpm_rowop
  * Perform a row operation on the given matrix, i.e., add one row,
  * weighted by a constant, to another.
  * @params
  *  * mat : the matrix object to operate on
  *  * destrow, sourcerow : unsigned  ints representing indices of the rows to operate on
- *  * constant : field_element representing the right constant
+ *  * constant : gfp_element representing the right constant
  *  * offset : unsigned  int, represents the number of zeros to skip before applying the row operation
  * @returns
  *  * 1 if success
  */
-int gfm_rowop( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow, field_element constant, unsigned  int offset )
+int gfpm_rowop( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow, gfp_element constant, unsigned  int offset )
 {
     unsigned  int j;
     for( j = offset ; j < mat.width ; ++j )
     {
-        mat.data[destrow*mat.width + j] = (mat.data[destrow*mat.width + j] + mat.data[sourcerow*mat.width + j] * constant) % MOD;
+        mat.data[destrow*mat.width + j] = (mat.data[destrow*mat.width + j] + mat.data[sourcerow*mat.width + j] * constant) % GF_PRIME_MODULUS;
     }
 
     return 1;
 }
 
 /**
- * gfm_scalerow
+ * gfpm_scalerow
  * Scales a single row in the matrix with a given constant.
  * @params
  *  * mat : the matrix object to operate on
  *  * rowidx : index of the row to scale
- *  * constant : field_element -- the field element to multiply the
+ *  * constant : gfp_element -- the field element to multiply the
  *    row with
  * @returns
  *  * 1 if success, 0 otherwise
  */
-int gfm_scalerow( gfmatrix mat, unsigned  int rowidx, field_element constant )
+int gfpm_scalerow( gfpmatrix mat, unsigned  int rowidx, gfp_element constant )
 {
     unsigned  int j;
     for( j = 0 ; j < mat.width ; ++j )
     {
-        mat.data[rowidx*mat.width + j] = (mat.data[rowidx*mat.width + j] * constant) % MOD;
+        mat.data[rowidx*mat.width + j] = (mat.data[rowidx*mat.width + j] * constant) % GF_PRIME_MODULUS;
     }
     return 1;
 }
 
 /**
- * gfm_fliprows
+ * gfpm_fliprows
  * Flip two rows in the given matrix.
  * @params
  *  * mat : the matrix object to operate on
@@ -720,10 +705,10 @@ int gfm_scalerow( gfmatrix mat, unsigned  int rowidx, field_element constant )
  * @return
  *  * 1 if success
  */
-int gfm_fliprows( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow )
+int gfpm_fliprows( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow )
 {
     unsigned  int j;
-    field_element a;
+    gfp_element a;
     for( j = 0 ; j < mat.width ; ++j )
     {
         a = mat.data[destrow*mat.width + j];
@@ -735,7 +720,7 @@ int gfm_fliprows( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow )
 }
 
 /**
- * gfm_redech
+ * gfpm_redech
  * Reduce the given matrix to reduced row echelon form using row
  * operations.
  * @params
@@ -743,10 +728,10 @@ int gfm_fliprows( gfmatrix mat, unsigned  int destrow, unsigned  int sourcerow )
  * @return
  *  1 if success
  */
-int gfm_redech( gfmatrix mat )
+int gfpm_redech( gfpmatrix mat )
 {
     unsigned  int col, row, i;
-    field_element inv;
+    gfp_element inv;
     row = 0;
     for( col = 0 ; col < mat.width ; ++col )
     {
@@ -756,7 +741,7 @@ int gfm_redech( gfmatrix mat )
             {
                 if( i != row )
                 {
-                    gfm_fliprows(mat, i, row);
+                    gfpm_fliprows(mat, i, row);
                 }
                 break;
             }
@@ -771,7 +756,7 @@ int gfm_redech( gfmatrix mat )
         
         if( inv != 1 )
         {
-            gfm_scalerow(mat, row, inv);
+            gfpm_scalerow(mat, row, inv);
         }
 
         for( i = 0 ; i < mat.height ; ++i )
@@ -780,7 +765,7 @@ int gfm_redech( gfmatrix mat )
             {
                 continue;
             }
-            gfm_rowop(mat, i, row, (MOD - mat.data[i*mat.width + col]) % MOD, col);
+            gfpm_rowop(mat, i, row, (GF_PRIME_MODULUS - mat.data[i*mat.width + col]) % GF_PRIME_MODULUS, col);
         }
 
         row = row + 1;
@@ -795,31 +780,29 @@ int gfm_redech( gfmatrix mat )
 }
 
 /**
- * gfm_solve
+ * gfpm_solve
  * Solve a matrix equation of the form Ax = b for x up to a term in
  * the kernel of A. This routine also initializes a kernel matrix,
  * whose rows form a basis for the kernel of A.
  * @params
- *  * coeffs : a mxn gfmatrix object representing the coefficient
+ *  * coeffs : a mxn gfpmatrix object representing the coefficient
  *    matrix A
- *  * target : a mx1 gfmatrix object representing the b vector
- *  * solution : a nx1 gfmatrix object to store one solution into
- *  * kernel : an uninitialized gfmatrix object whose columns will
+ *  * target : a mx1 gfpmatrix object representing the b vector
+ *  * solution : a nx1 gfpmatrix object to store one solution into
+ *  * kernel : an uninitialized gfpmatrix object whose columns will
  *    span the kernel of A
  * @post
  *  * for all kernel.width x 1 vectors "random" holds:
  *          coeffs * (solution + kernel * random) = target
  * @return
- *  * r : int, which is equal up to sign to the rank of the kernel;
- *    the sign is positive if the target is in the coefficient
- *    matrix's column span.
+ *  * 1 if a solution exists, 0 otherwise
  */
-int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * kernel )
+int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatrix * kernel )
 {
     /* declare variables for echelon reduction */
     unsigned  int col, row, i, j;
-    field_element inv;
-    gfmatrix mat;
+    gfp_element inv;
+    gfpmatrix mat;
 
     /* declare variables for pivot tracking */
     unsigned  int *pivots;
@@ -835,8 +818,8 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
     npivots = malloc(sizeof(unsigned  int) * (coeffs.width+1));
 
     /* initialize mat and copy coeffs and target to it */
-    mat = gfm_init(coeffs.height, coeffs.width+1);
-    /*gfm_copy(mat, coeffs);*/
+    mat = gfpm_init(coeffs.height, coeffs.width+1);
+    /*gfpm_copy(mat, coeffs);*/
     for( i = 0 ; i < mat.height ; ++i )
     {
         for( j = 0 ; j < coeffs.width ; ++j )
@@ -859,7 +842,7 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
             {
                 if( i != row )
                 {
-                    gfm_fliprows(mat, i, row);
+                    gfpm_fliprows(mat, i, row);
                 }
                 break;
             }
@@ -879,7 +862,7 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
         
         if( inv != 1 )
         {
-            gfm_scalerow(mat, row, inv);
+            gfpm_scalerow(mat, row, inv);
         }
 
         for( i = 0 ; i < mat.height ; ++i )
@@ -888,7 +871,7 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
             {
                 continue;
             }
-            gfm_rowop(mat, i, row, (MOD - mat.data[i*mat.width + col]) % MOD, col);
+            gfpm_rowop(mat, i, row, (GF_PRIME_MODULUS - mat.data[i*mat.width + col]) % GF_PRIME_MODULUS, col);
         }
 
         row = row + 1;
@@ -918,36 +901,69 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
         }
     }
 
-    /* read out kernel */
-    *kernel = gfm_init(mat.width-1, num_npivots-1);
-    gfm_zeros(*kernel);
-    for( j = 0 ; j < num_npivots-1 ; ++j )
+    /* read out kernel, if it exists */
+    if( num_npivots > 1 )
     {
-        kernel->data[npivots[j]*kernel->width + j] = MOD - 1;
-        for( i = 0 ; i < num_pivots && pivots[i] < npivots[j] ; ++i )
+        *kernel = gfpm_init(mat.width-1, num_npivots-1);
+        gfpm_zeros(*kernel);
+        for( j = 0 ; j < num_npivots-1 ; ++j )
         {
-            kernel->data[pivots[i]*kernel->width + j] = mat.data[i*mat.width + npivots[j]];
+            kernel->data[npivots[j]*kernel->width + j] = GF_PRIME_MODULUS - 1;
+            for( i = 0 ; i < num_pivots && pivots[i] < npivots[j] ; ++i )
+            {
+                kernel->data[pivots[i]*kernel->width + j] = mat.data[i*mat.width + npivots[j]];
+            }
         }
-    }
-
-    /* free allocated memory */
-    gfm_destroy(mat);
-    free(pivots);
-    free(npivots);
-
-    if( have_solution == 1 )
-    {
-        return num_npivots-1;
     }
     else
     {
-        return 1-num_npivots;
+        kernel->width = 0;
     }
+
+    /* free allocated memory */
+    gfpm_destroy(mat);
+    free(pivots);
+    free(npivots);
+
+    return have_solution;
 }
 
+/**
+ * gfpm_inspan
+ * Decide if a vector is in the column span of a matrix.
+ * @params:
+ *  * vec : nx1 matrix
+ *  * mat : nxm matrix
+ * @returns:
+ *  * 1 if vec is in colspan(mat); 0 otherwise
+ */
+int gfpm_inspan( gfpmatrix vec, gfpmatrix mat )
+{
+    gfpmatrix solution, kernel;
+    int i, j;
+    int success;
+
+    #ifdef DEBUG
+        if( mat.height != vec.height || vec.width != 1 )
+        {
+            printf("cannot decide if %ix%i vector is in colspan of %ix%i matrix because of dimension mismatch.\n", vec.height, vec.width, mat.height, mat.width);
+            return 0;
+        }
+    #endif
+
+    /* try and solve the system; if the system is consistent, the vector
+     * lies in the span of the matrix */
+    solution = gfpm_init(mat.width, 1);
+    success = gfpm_solve(mat, vec, solution, &kernel);
+    gfpm_destroy(solution);
+    if( kernel.width > 0 )
+        gfpm_destroy(kernel);
+
+    return success;
+}
 
 /**
- * gfm_stack
+ * gfpm_stack
  * Stacks one matrix on top of another, and stores the result in the third
  * @params
  *  * mat : matrix object to store the result into
@@ -955,14 +971,14 @@ int gfm_solve( gfmatrix coeffs, gfmatrix target, gfmatrix solution, gfmatrix * k
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
+int gfpm_stack( gfpmatrix mat, gfpmatrix top, gfpmatrix bottom )
 {
     unsigned  int i, j;
 
     #ifdef DEBUG
         if( mat.width != top.width || top.width != bottom.width || mat.height != top.height + bottom.height )
         {
-            printf("in gfm_stack: cannot stack matrices of conflicting dimensions! %ix%i stack %ix%i = %ix%i\n", top.height, top.width, bottom.height, bottom.width, mat.height, mat.width);
+            printf("in gfpm_stack: cannot stack matrices of conflicting dimensions! %ix%i stack %ix%i = %ix%i\n", top.height, top.width, bottom.height, bottom.width, mat.height, mat.width);
             return 0;
         }
     #endif
@@ -985,7 +1001,7 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
 }
 
 /**
- * gfm_cat
+ * gfpm_cat
  * Concatenates one matrix to another, and stores the result in a
  * third matrix.
  * @params
@@ -995,14 +1011,14 @@ int gfm_stack( gfmatrix mat, gfmatrix top, gfmatrix bottom )
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
+int gfpm_cat( gfpmatrix res, gfpmatrix left, gfpmatrix right )
 {
     unsigned  int i, j;
 
     #ifdef DEBUG
         if( res.height != left.height || left.height != right.height || res.width != left.width + right.width )
         {
-            printf("in gfm_cat: cannot concatenate two matrices of conflicting dimensions! %ix%i cat %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, res.height, res.width);
+            printf("in gfpm_cat: cannot concatenate two matrices of conflicting dimensions! %ix%i cat %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, res.height, res.width);
             return 0;
         }
     #endif
@@ -1022,7 +1038,7 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
 }
 
 /**
- * gfm_slice
+ * gfpm_slice
  * Slice a submatrix out of another matrix.
  * @params:
  *  * dest : the matrix to store the result in; the height and width
@@ -1033,13 +1049,13 @@ int gfm_cat( gfmatrix res, gfmatrix left, gfmatrix right )
  * @return
  *  * 1 if success, 0 otherwise
  */
-int gfm_slice( gfmatrix dest, gfmatrix source, unsigned  int row_start, unsigned  int col_start )
+int gfpm_slice( gfpmatrix dest, gfpmatrix source, unsigned  int row_start, unsigned  int col_start )
 {
     unsigned  int i, j;
     #ifdef DEBUG
         if( source.width < col_start + dest.width || source.height < row_start + dest.height )
         {
-            printf("in gfm_slice: cannot grab slice because slice size exceeds bounds! slicing %ix%i submatrix starting at (%i,%i) from %ix%i matrix\n", dest.height, dest.width, row_start, col_start, source.height, source.width);
+            printf("in gfpm_slice: cannot grab slice because slice size exceeds bounds! slicing %ix%i submatrix starting at (%i,%i) from %ix%i matrix\n", dest.height, dest.width, row_start, col_start, source.height, source.width);
             return 0;
         }
     #endif
@@ -1054,17 +1070,17 @@ int gfm_slice( gfmatrix dest, gfmatrix source, unsigned  int row_start, unsigned
 }
 
 /**
- * gfm_inverse
+ * gfpm_inverse
  * Compute the matrix inverse of mat, store the result in inv.
  * @return
  *  * 1 if success
  */
-int gfm_inverse( gfmatrix inv, gfmatrix mat )
+int gfpm_inverse( gfpmatrix inv, gfpmatrix mat )
 {
     unsigned int i, j;
     unsigned  int catwidth;
     int invertible;
-    gfmatrix concat;
+    gfpmatrix concat;
    
     catwidth = inv.width + mat.width;
 
@@ -1079,11 +1095,11 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
     }
 
     /* Concatenate mat with identity */
-    concat = gfm_init(mat.height, catwidth);
-    gfm_cat(concat, mat, inv);
+    concat = gfpm_init(mat.height, catwidth);
+    gfpm_cat(concat, mat, inv);
 
     /* row-reduce concat to echelon form */
-    gfm_redech(concat);
+    gfpm_redech(concat);
 
     /* test if main diagonal has only ones, because otherwise the
      * matrix is not invertible */
@@ -1093,9 +1109,9 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
         invertible = invertible & (int)(concat.data[i*concat.width + i]);
     }
 
-    if( !invertible )
+    if( 0 == invertible )
     {
-        gfm_destroy(concat);
+        gfpm_destroy(concat);
         return 0;
     }
 
@@ -1109,16 +1125,16 @@ int gfm_inverse( gfmatrix inv, gfmatrix mat )
     }
 
     /* free concat */
-    gfm_destroy(concat);
+    gfpm_destroy(concat);
 
     return 1;
 }
 
 /**
- * gfm_print
+ * gfpm_print
  * Use printf to print the matrix to stdout.
  */
-int gfm_print( gfmatrix mat )
+int gfpm_print( gfpmatrix mat )
 {
     unsigned int i, j;
     for( i = 0 ; i < mat.height ; ++i )
@@ -1134,16 +1150,16 @@ int gfm_print( gfmatrix mat )
 }
 
 /**
- * gfm_print_transpose
+ * gfpm_print_transpose
  * Use printf to print the transpose of the matrix to stdout.
  */
-int gfm_print_transpose( gfmatrix mat )
+int gfpm_print_transpose( gfpmatrix mat )
 {
-    gfmatrix temp;
-    temp = gfm_clone(mat);
-    gfm_transpose(&temp);
-    gfm_print(temp);
-    gfm_destroy(temp);
+    gfpmatrix temp;
+    temp = gfpm_clone(mat);
+    gfpm_transpose(&temp);
+    gfpm_print(temp);
+    gfpm_destroy(temp);
     return 1;
 }
 
@@ -1152,7 +1168,7 @@ int gfm_print_transpose( gfmatrix mat )
  * Create homogeneous quadratic system object from a list of
  * of quadratic forms and the system's dimensions.
  */
-hqsystem hqs( gfmatrix* qfs, unsigned  int n, unsigned  int m )
+hqsystem hqs( gfpmatrix* qfs, unsigned  int n, unsigned  int m )
 {
     hqsystem hqs;
     hqs.quadratic_forms = qfs;
@@ -1173,10 +1189,10 @@ hqsystem hqs_init( unsigned  int n, unsigned  int m )
     hqsystem hqs;
     hqs.n = n;
     hqs.m = m;
-    hqs.quadratic_forms = malloc(sizeof(gfmatrix) * m);
+    hqs.quadratic_forms = malloc(sizeof(gfpmatrix) * m);
     for( i = 0 ; i < m ; ++i )
     {
-        hqs.quadratic_forms[i].data = malloc(n*n*sizeof(field_element));
+        hqs.quadratic_forms[i].data = malloc(n*n*sizeof(gfp_element));
         hqs.quadratic_forms[i].width = n;
         hqs.quadratic_forms[i].height = n;
     }
@@ -1219,7 +1235,7 @@ int hqs_copy( hqsystem dest, hqsystem source )
 
     for( i = 0 ; i < dest.m ; ++i )
     {
-        gfm_copy(dest.quadratic_forms[i], source.quadratic_forms[i]);
+        gfpm_copy(dest.quadratic_forms[i], source.quadratic_forms[i]);
     }
     return 1;
 }
@@ -1250,20 +1266,17 @@ hqsystem hqs_clone( hqsystem source )
  *  * sys : a homogeneous quadratic system; the dimensions of this
  *    system will be retained; the coefficients (entries of the
  *    matrices) will be forgotten
- *  * rng : pointer to the csprng object to draw the random numbers
- *    from
+ *  * randomness : a pointer to a large enough string of random bytes
+ *    "large enough" means n*n*m*sizeof(unsigned int)
  * @result
  *  * sys will contain random coefficients
  * @return
  *  * 1 if success, 0 otherwise
  */
-int hqs_random( hqsystem sys, csprng * rng )
+int hqs_random( hqsystem sys, unsigned char * randomness )
 {
     unsigned int i, j, k, l;
-    unsigned  int * randomness;
-
-    randomness = malloc(sizeof(unsigned  int) * sys.m * sys.n * sys.n);
-    csprng_generate(rng, sizeof(unsigned  int) * sys.m * sys.n * sys.n, (unsigned char*)randomness);
+    unsigned  int * rand = (unsigned int *)randomness;
 
     l = 0;
     for( k = 0 ; k < sys.m ; ++k )
@@ -1272,13 +1285,11 @@ int hqs_random( hqsystem sys, csprng * rng )
         {
             for( j = 0 ; j < sys.n ; ++j )
             {
-                sys.quadratic_forms[k].data[i*sys.n + j] = randomness[l] % MOD;
+                sys.quadratic_forms[k].data[i*sys.n + j] = randomness[l] % GF_PRIME_MODULUS;
                 l++;
             }
         }
     }
-
-    free(randomness);
 
     return 1;
 }
@@ -1288,7 +1299,7 @@ int hqs_random( hqsystem sys, csprng * rng )
  * Compose a homogeneous quadratic system on the left with a
  * linear transform.
  * @params
- *  * T : a gfmatrix object of dimensions mxm
+ *  * T : a gfpmatrix object of dimensions mxm
  *  * F : an hqsystem object of dimensions n -> m
  * @promise
  *  * T is square
@@ -1299,12 +1310,12 @@ int hqs_random( hqsystem sys, csprng * rng )
  * @return
  * 1 if success, 0 otherwise
  */
-int hqs_compose_output( gfmatrix T, hqsystem F )
+int hqs_compose_output( gfpmatrix T, hqsystem F )
 {
     unsigned int i, j;
     /* declare helper variables */
     hqsystem P;
-    gfmatrix temp;
+    gfpmatrix temp;
 
 #ifdef DEBUG
     if( T.width != F.m )
@@ -1316,16 +1327,16 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
 
     /* init helper variables */
     P = hqs_init(F.n, T.height);
-    temp = gfm_init(F.n, F.n);
+    temp = gfpm_init(F.n, F.n);
 
     /* perform multiplication */
     for( i = 0 ; i < T.height ; ++i )
     {
-        gfm_zeros(P.quadratic_forms[i]);
+        gfpm_zeros(P.quadratic_forms[i]);
         for( j = 0 ; j < T.width ; ++j )
         {
-            gfm_multiply_constant(temp, F.quadratic_forms[j], T.data[i*T.width + j]);
-            gfm_add(P.quadratic_forms[i], P.quadratic_forms[i], temp);
+            gfpm_multiply_constant(temp, F.quadratic_forms[j], T.data[i*T.width + j]);
+            gfpm_add(P.quadratic_forms[i], P.quadratic_forms[i], temp);
         }
     }
 
@@ -1334,7 +1345,7 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
 
     /* destroy helper variables */
     hqs_destroy(P);
-    gfm_destroy(temp);
+    gfpm_destroy(temp);
 
     return 1;
 }
@@ -1355,12 +1366,12 @@ int hqs_compose_output( gfmatrix T, hqsystem F )
  * @return
  *  * 1 if success, 0 otherwise
  */
-int hqs_compose_input( hqsystem F, gfmatrix S )
+int hqs_compose_input( hqsystem F, gfpmatrix S )
 {
     unsigned int i;
 
     /* declare helper variables */
-    gfmatrix temp;
+    gfpmatrix temp;
 
     /* debug stuff */
 #ifdef DEBUG
@@ -1373,17 +1384,17 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
 
     /* init helper variables */
 
-    temp = gfm_init(S.height, S.height);
+    temp = gfpm_init(S.height, S.height);
 
     /* perform multiplication */
     for( i = 0 ; i < F.m ; ++i )
     {
-        gfm_transpose_multiply(temp, S, F.quadratic_forms[i]);
-        gfm_multiply(F.quadratic_forms[i], temp, S);
+        gfpm_transpose_multiply(temp, S, F.quadratic_forms[i]);
+        gfpm_multiply(F.quadratic_forms[i], temp, S);
     }
 
     /* destroy helper variables */
-    gfm_destroy(temp);
+    gfpm_destroy(temp);
 
     return 1;
 }
@@ -1393,11 +1404,11 @@ int hqs_compose_input( hqsystem F, gfmatrix S )
  * Evaluate a homogeneous quadratic system in a vector or, by
  * treating the columns as a list of vectors, as a matrix.
  */
-int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x )
+int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
 {
     unsigned int i, j, k;
-    gfmatrix vector, transposed_vector, temp, e;
-    field_element edata;
+    gfpmatrix vector, transposed_vector, temp, e;
+    gfp_element edata;
 
 #ifdef DEBUG
     if( y.height != sys.m || sys.n != x.height || y.width != x.width )
@@ -1407,27 +1418,27 @@ int hqs_eval( gfmatrix y, hqsystem sys, gfmatrix x )
     }
 #endif
 
-    vector = gfm_init(sys.n, 1);
-    transposed_vector = gfm(1, sys.n, vector.data);
-    temp = gfm_init(sys.n, 1);
-    e = gfm(1, 1, &edata);
+    vector = gfpm_init(sys.n, 1);
+    transposed_vector = gfpm(1, sys.n, vector.data);
+    temp = gfpm_init(sys.n, 1);
+    e = gfpm(1, 1, &edata);
 
     for( j = 0 ; j < x.width ; ++j )
     {
-        gfm_slice(vector, x, 0, j);
+        gfpm_slice(vector, x, 0, j);
         for( i = 0 ; i < x.height ; ++i )
         {
             for( k = 0 ; k < sys.m ; ++k )
             {
-                gfm_multiply(temp, sys.quadratic_forms[k], vector);
-                gfm_multiply(e, transposed_vector, temp);
+                gfpm_multiply(temp, sys.quadratic_forms[k], vector);
+                gfpm_multiply(e, transposed_vector, temp);
                 y.data[k*y.width + j] = e.data[0];
             }
         }
     }
 
-    gfm_destroy(vector);
-    gfm_destroy(temp);
+    gfpm_destroy(vector);
+    gfpm_destroy(temp);
 
     return 1;
 }

@@ -345,8 +345,8 @@ int test_composition( )
     n = 15;
 
     F = hqs_init(n, m);
-    randomness = malloc(sizeof(unsigned int) * m * n * n);
-    csprng_generate(&rng, sizeof(unsigned int) * m * n * n, randomness);
+    randomness = malloc((GFP_NUMBYTES+1) * m * n * n);
+    csprng_generate(&rng, (GFP_NUMBYTES+1)* m * n * n, randomness);
     hqs_random(F, randomness);
     free(randomness);
     P = hqs_clone(F);
@@ -357,12 +357,12 @@ int test_composition( )
     S = gfpm_init(n, n);
 
 
-    randomness = malloc(sizeof(unsigned int) * m * m);
-    csprng_generate(&rng, sizeof(unsigned int) * m * m, randomness);
+    randomness = malloc((GFP_NUMBYTES+1)* m * m);
+    csprng_generate(&rng, (GFP_NUMBYTES+1)* m * m, randomness);
     gfpm_random_invertible(T, randomness);
     free(randomness);
-    randomness = malloc(sizeof(unsigned int) * n * n);
-    csprng_generate(&rng, sizeof(unsigned int) * n * n, randomness);
+    randomness = malloc((GFP_NUMBYTES+1)* n * n);
+    csprng_generate(&rng, (GFP_NUMBYTES+1)* n * n, randomness);
     gfpm_random_invertible(S, randomness);
     free(randomness);
 
@@ -381,8 +381,8 @@ int test_composition( )
     equal = 1;
     for( i = 0 ; i < 1 && equal == 1 ; ++i )
     {
-        randomness = malloc(sizeof(unsigned int) * x.height * x.width);
-        csprng_generate(&rng, sizeof(unsigned int) * x.height * x.width, randomness);
+        randomness = malloc((GFP_NUMBYTES+1)* x.height * x.width);
+        csprng_generate(&rng, (GFP_NUMBYTES+1)* x.height * x.width, randomness);
         gfpm_random(x, randomness);
         free(randomness);
 

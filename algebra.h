@@ -1,11 +1,7 @@
 #ifndef ALGEBRA_H
 #define ALGEBRA_H
 
-#ifndef GF_PRIME_MODULUS
-#define GF_PRIME_MODULUS 3
-#endif
-
-typedef unsigned char gfp_element;
+#include "gfp.h"
 
 /**
  * finite field arithmetic

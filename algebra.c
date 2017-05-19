@@ -176,6 +176,8 @@ int gfpm_is_eye( gfpmatrix eye )
     int b = 1;
     gfp_element one, zero;
     
+    one = gfp_init(1);
+    zero = gfp_init(1);
     gfp_one(&one);
     gfp_zero(&zero);
 
@@ -193,6 +195,9 @@ int gfpm_is_eye( gfpmatrix eye )
             }
         }
     }
+
+    gfp_destroy(one);
+    gfp_destroy(zero);
 
     return b;
 }
@@ -377,8 +382,8 @@ int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness )
  */
 int gfpm_transpose( gfpmatrix * trans )
 {
-    gfp_element a;
-    unsigned  int i, j;
+    unsigned int a;
+    unsigned int i, j;
 
     gfpmatrix T;
 
@@ -426,6 +431,10 @@ int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
 
+    prod = gfp_init(1);
+    sum = gfp_init(1);
+    lsum = gfp_init(1);
+
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != right.width || left.width != right.height )
         {
@@ -448,6 +457,10 @@ int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
             gfp_copy(&dest.data[i*dest.width + j], sum);
         }
     }
+
+    gfp_destroy(prod);
+    gfp_destroy(sum);
+    gfp_destroy(lsum);
 
     return 1;
 }
@@ -477,6 +490,10 @@ int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
 
+    prod = gfp_init(1);
+    sum = gfp_init(1);
+    lsum = gfp_init(1);
+
     #ifdef DEBUG
         if( dest.height != left.height || dest.width != rightT.height || left.width != rightT.width )
         {
@@ -499,6 +516,10 @@ int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
             gfp_copy(&dest.data[i*dest.width + j], sum);
         }
     }
+
+    gfp_destroy(prod);
+    gfp_destroy(sum);
+    gfp_destroy(lsum);
 
     return 1;
 }
@@ -528,6 +549,10 @@ int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
 
+    prod = gfp_init(1);
+    sum = gfp_init(1);
+    lsum = gfp_init(1);
+
     #ifdef DEBUG
         if( dest.height != leftT.width || dest.width != right.width || leftT.height != right.height )
         {
@@ -550,6 +575,10 @@ int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
             gfp_copy(&dest.data[i*dest.width + j], sum);
         }
     }
+
+    gfp_destroy(prod);
+    gfp_destroy(sum);
+    gfp_destroy(lsum);
 
     return 1;
 }
@@ -636,6 +665,9 @@ int gfpm_weighted_sum( gfpmatrix dest, gfp_element left_constant, gfpmatrix left
 
     gfp_element lhs, rhs;
 
+    lhs = gfp_init(1);
+    rhs = gfp_init(1);
+
     #ifdef DEBUG
         if( dest.width != left_matrix.width || left_matrix.width != right_matrix.width || dest.height != left_matrix.height || left_matrix.height != right_matrix.height )
         {
@@ -653,6 +685,9 @@ int gfpm_weighted_sum( gfpmatrix dest, gfp_element left_constant, gfpmatrix left
             gfp_add(&dest.data[i*dest.width + j], lhs, rhs);
         }
     }
+
+    gfp_destroy(lhs);
+    gfp_destroy(rhs);
 
     return 1;
 }
@@ -673,12 +708,19 @@ int gfpm_rowop( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow, g
 {
     unsigned  int j;
     gfp_element prod, sum;
+
+    prod = gfp_init(1);
+    sum = gfp_init(1);
+
     for( j = offset ; j < mat.width ; ++j )
     {
         gfp_multiply(&prod, mat.data[sourcerow*mat.width + j], constant);
         gfp_add(&sum, mat.data[destrow*mat.width + j], prod);
         gfp_copy(&mat.data[destrow*mat.width + j], sum);
     }
+
+    gfp_destroy(prod);
+    gfp_destroy(sum);
 
     return 1;
 }
@@ -698,11 +740,17 @@ int gfpm_scalerow( gfpmatrix mat, unsigned  int rowidx, gfp_element constant )
 {
     unsigned  int j;
     gfp_element temp;
+
+    temp = gfp_init(1);
+
     for( j = 0 ; j < mat.width ; ++j )
     {
         gfp_multiply(&temp, mat.data[rowidx*mat.width + j], constant);
         gfp_copy(&mat.data[rowidx*mat.width + j], temp);
     }
+
+    gfp_destroy(temp);
+
     return 1;
 }
 
@@ -719,12 +767,17 @@ int gfpm_fliprows( gfpmatrix mat, unsigned  int destrow, unsigned  int sourcerow
 {
     unsigned  int j;
     gfp_element a;
+
+    a = gfp_init(1);
+
     for( j = 0 ; j < mat.width ; ++j )
     {
         gfp_copy(&a, mat.data[destrow*mat.width + j]);
         gfp_copy(&mat.data[destrow*mat.width + j], mat.data[sourcerow*mat.width + j]);
         gfp_copy(&mat.data[sourcerow*mat.width + j], a);
     }
+
+    gfp_destroy(a);
 
     return 1;
 }
@@ -742,6 +795,9 @@ int gfpm_redech( gfpmatrix mat )
 {
     unsigned  int col, row, i;
     gfp_element inv;
+
+    inv = gfp_init(1);
+
     row = 0;
     for( col = 0 ; col < mat.width ; ++col )
     {
@@ -786,6 +842,8 @@ int gfpm_redech( gfpmatrix mat )
         }
     }
 
+    gfp_destroy(inv);
+
     return 1;
 }
 
@@ -820,6 +878,11 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
     unsigned  int num_pivots;
     unsigned  int num_npivots;
     int have_solution;
+
+    inv = gfp_init(1);
+    zero = gfp_init(1);
+    one = gfp_init(1);
+    minusone = gfp_init(1);
 
     gfp_zero(&zero);
     gfp_one(&one);
@@ -940,6 +1003,11 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
     gfpm_destroy(mat);
     free(pivots);
     free(npivots);
+
+    gfp_destroy(inv);
+    gfp_destroy(zero);
+    gfp_destroy(one);
+    gfp_destroy(minusone);
 
     return have_solution;
 }
@@ -1424,6 +1492,8 @@ int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
     gfpmatrix vector, transposed_vector, temp, e;
     gfp_element edata;
 
+    edata = gfp_init(1);
+
 #ifdef DEBUG
     if( y.height != sys.m || sys.n != x.height || y.width != x.width )
     {
@@ -1453,6 +1523,7 @@ int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
 
     gfpm_destroy(vector);
     gfpm_destroy(temp);
+    gfp_destroy(edata);
 
     return 1;
 }

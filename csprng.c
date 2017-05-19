@@ -83,3 +83,14 @@ int csprng_generate( csprng* rng, unsigned int buffer_length, unsigned char * bu
     return 1;
 }
 
+/**
+ * csprng_generate_ulong
+ * Use the csprng to generate only an unsigned long int.
+ */
+unsigned long int csprng_generate_ulong( csprng * rng )
+{
+    unsigned long int ulong;
+    csprng_generate(rng, sizeof(unsigned long int), (unsigned char*)&ulong);
+    return ulong;
+}
+

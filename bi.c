@@ -51,6 +51,11 @@ int bi_copy( bi * dest, bi source )
     {
         dest->data[i] = source.data[i];
     }
+    for( i = source.num_limbs ; i < dest->num_limbs ; ++i )
+    {
+        dest->data[i] = 0;
+    }
+    dest->num_limbs = source.num_limbs;
     return 1;
 }
 
@@ -234,7 +239,7 @@ int bi_subtract_limbs( unsigned long int * difference, unsigned long int * borro
  * @params:
  *  * produce : pointer to unsigned long int -- designated container
  *    for the product
- *  * carry : pointer to unsigend long int -- to be incremented by
+ *  * carry : pointer to unsigend long int -- to be set to
  *    whatever overload occurs
  *  * lhs, rhs : unsigned long ints -- operands to multiply together
  */
@@ -256,16 +261,14 @@ int bi_multiply_limbs( unsigned long int * product, unsigned long int * carry, u
         for( j = 0 ; j < sizeof(unsigned long int) ; ++j )
         {
             k = i-j;
-            if( k < 0 || j < 0 || k >= sizeof(unsigned long int) || j >= sizeof(unsigned long int) )
+            if( k < 0 || k >= sizeof(unsigned long int) )
             {
                 continue;
             }
             prod_ulongs[i] = prod_ulongs[i] + lhs_uchars[j]* rhs_uchars[k];
         }
-        //printf("prod_ulongs[%i] = %u\n", i, prod_ulongs[i]);
         prod_ulongs[i+1] = prod_ulongs[i] >> 8;
     }
-    //getchar();
 
     *product = (unsigned long int)(lhs * rhs);
     
@@ -274,8 +277,6 @@ int bi_multiply_limbs( unsigned long int * product, unsigned long int * carry, u
     {
         *carry = *carry | ((prod_ulongs[sizeof(unsigned long int)+i] & 255) << (8*i));
     }
-
-    //printf(" bin(%lu * %lu - %lu * 2^%i - %lu)\n", lhs, rhs, *carry, sizeof(unsigned long int)*8, *product);
 
     return 1;
 }
@@ -355,6 +356,18 @@ int bi_add_ignoresign( bi * res, bi lhs, bi rhs )
 int bi_add( bi * res, bi lhs, bi rhs )
 {
     int cmp;
+
+    if( bi_is_zero(lhs) )
+    {
+        bi_copy(res, rhs);
+        return 1;
+    }
+    else if( bi_is_zero(rhs) )
+    {
+        bi_copy(res, lhs);
+        return 1;
+    }
+
     cmp =  bi_compare_absolute(lhs, rhs);
 
     if( lhs.sign == 1 && rhs.sign == 1 )
@@ -436,46 +449,66 @@ int bi_add( bi * res, bi lhs, bi rhs )
  */
 int bi_subtract_ignoresign( bi * res, bi lhs, bi rhs )
 {
-    int min, max, i;
-    unsigned long int borrow, temp;
-    unsigned long int * data;
+    int min, max;
+    unsigned long int temp, borrow;
     unsigned long int * borrows;
+    int i, j;
+    unsigned long int * data;
 
-    min = rhs.num_limbs;
     max = lhs.num_limbs;
+    min = rhs.num_limbs;
 
-    borrows = malloc((max+1)*sizeof(unsigned long int));
-    data = malloc(max * sizeof(unsigned long int));
-    for( i = 0 ; i < max ; ++i )
+    if( max < min )
+    {
+        for( min = min ; min > 1 ; --min )
+        {
+            if( rhs.data[min-1] != 0 )
+            {
+                break;
+            }
+        }
+    }
+
+    res->num_limbs = max;
+    data = malloc(sizeof(unsigned long int)*max);
+    for( i = 0 ; i < res->num_limbs ; ++i )
     {
         data[i] = 0;
     }
+    res->sign = 1;
 
-    borrows[0] = 0;
+    borrows = malloc(sizeof(unsigned long int)*(max+1));
+    for( i = 0 ; i < max+1 ; ++i )
+    {
+        borrows[i] = 0;
+    }
+
     for( i = 0 ; i < min ; ++i )
     {
-        borrow = 0;
-        bi_subtract_limbs(&temp, &borrow, lhs.data[i], borrows[i]);
-        bi_subtract_limbs(&data[i], &borrow, temp, rhs.data[i]);
-        borrows[i+1] = borrow;
+        bi_subtract_limbs(&data[i], &borrows[i+1], lhs.data[i], rhs.data[i]);
     }
     for( i = min ; i < max ; ++i )
     {
-        borrow = 0;
-        bi_subtract_limbs(&data[i], &borrow, lhs.data[i], borrows[i]);
-        borrows[i+1] = borrow;
+        data[i] = lhs.data[i];
     }
 
-    free(res->data);
-    res->data = data;
-    res->sign = 1;
+    for( i = 1 ; i < max ; ++i )
+    {
+        temp = data[i];
+        bi_subtract_limbs(&data[i], &borrows[i+1], temp, borrows[i]);
+    }
+
     for( res->num_limbs = max ; res->num_limbs > 1 ; --res->num_limbs )
     {
-        if( res->data[res->num_limbs-1] != 0 )
+        if( data[res->num_limbs-1] != 0 )
         {
             break;
         }
     }
+
+    free(borrows);
+    free(res->data);
+    res->data = data;
 
     return 1;
 }
@@ -571,7 +604,7 @@ int bi_negate( bi * op )
 
 /**
  * bi_multiply_shift_limb
- * Multiply a big integer by a limb and shift it left bu a given
+ * Multiply a big integer by a limb and shift it left by a given
  * number of limbs.
  * @params:
  *  * res : big integer -- stores the product
@@ -583,11 +616,10 @@ int bi_multiply_shift_limb( bi * res, bi op, unsigned long int limb, int shamt )
 {
     unsigned long int carry, prod;
     int i;
-    bi hi, lo, temp;
+    bi hi, lo;
 
     hi = bi_init((op.num_limbs+1) * sizeof(unsigned long int) * 8);
     lo = bi_init((op.num_limbs) * sizeof(unsigned long int) * 8);
-    temp = bi_init(0);
 
     for( i = 0 ; i < op.num_limbs ; ++i )
     {
@@ -598,45 +630,34 @@ int bi_multiply_shift_limb( bi * res, bi op, unsigned long int limb, int shamt )
 
     for( i = 0 ; i < op.num_limbs ; ++i )
     {
-        carry = 0;
         bi_multiply_limbs(&prod, &carry, limb, op.data[i]);
         lo.data[i] = prod;
         hi.data[i+1] = carry;
     }
 
-    bi_add(&temp, hi, lo);
+    bi_add(&hi, hi, lo);
 
-    if( res->num_limbs < temp.num_limbs + shamt )
+    if( res->num_limbs < hi.num_limbs + shamt )
     {
-        res->num_limbs = temp.num_limbs + shamt;
+        res->num_limbs = hi.num_limbs + shamt;
         free(res->data);
         res->data = malloc(res->num_limbs * sizeof(unsigned long int));
     }
 
-    for( i = 0 ; i < res->num_limbs ; ++i )
+    for( i = 0 ; i < shamt ; ++i )
     {
         res->data[i] = 0;
     }
 
-    for( i = 0 ; i < temp.num_limbs ; ++i )
+    for( i = 0 ; i < hi.num_limbs ; ++i )
     {
-        res->data[i+shamt] = temp.data[i];
+        res->data[i+shamt] = hi.data[i];
     }
 
     bi_destroy(hi);
     bi_destroy(lo);
-    bi_destroy(temp);
 
     res->sign = op.sign;
-
-    if( limb == 2529350679851345645 )
-    {
-        printf("int('");
-        bi_print_bitstring(op);
-        printf("', 2) * %lu * 2^(%i) - int('", limb, sizeof(unsigned long int) * shamt * 8);
-        bi_print_bitstring(*res);
-        printf("', 2)\n");
-    }
 
     return 1;
 }
@@ -647,23 +668,26 @@ int bi_multiply_shift_limb( bi * res, bi op, unsigned long int limb, int shamt )
  */
 int bi_multiply( bi * res, bi lhs, bi rhs )
 {
-    bi curr, temp;
+    bi curr;
     unsigned int i;
 
-    temp = bi_init(res->num_limbs);
+    if( rhs.num_limbs > lhs.num_limbs )
+    {
+        return bi_multiply(res, rhs, lhs);
+    }
+
     curr = bi_init((lhs.num_limbs + rhs.num_limbs + 1)*sizeof(unsigned long int)*8);
+    bi_zero(res);
 
     for( i = 0 ; i < rhs.num_limbs ; ++i )
     {
         bi_multiply_shift_limb(&curr, lhs, rhs.data[i], i);
-        bi_copy(&temp, *res);
-        bi_add(res, temp, curr);
+        bi_add(res, *res, curr);
     }
 
     res->sign = lhs.sign * rhs.sign;
 
     bi_destroy(curr);
-    bi_destroy(temp);
 
     return 1;
 }
@@ -686,9 +710,90 @@ int bi_divide( bi * quo, bi * rem, bi numerator, bi denominator )
     int bitsize_denominator;
     int i;
     int cmp;
+    bi temp;
     bi shifted;
     unsigned char * randomness;
+    bi positive_numerator, positive_denominator, negative_quotient, negative_remainder;
+    bi one;
 
+
+    if( numerator.sign == -1 && denominator.sign == -1 )
+    {
+        positive_numerator = bi_init(0);
+        positive_denominator = bi_init(0);
+        negative_quotient = bi_init(0);
+        negative_remainder = bi_init(0);
+
+        bi_copy(&positive_numerator, numerator);
+        bi_copy(&positive_denominator, denominator);
+        bi_negate(&positive_numerator);
+        bi_negate(&positive_denominator);
+        bi_divide(quo, &negative_remainder, positive_numerator, positive_denominator);
+
+        bi_negate(&negative_remainder);
+        bi_subtract(rem, negative_remainder, denominator);
+        
+        one = bi_init(0);
+        bi_one(&one);
+        temp = bi_init(0);
+        bi_copy(&temp, *quo);
+        bi_add(quo, temp, one);
+
+        bi_destroy(temp);
+        bi_destroy(one);
+        
+        bi_destroy(positive_numerator);
+        bi_destroy(positive_denominator);
+        bi_destroy(negative_quotient);
+        bi_destroy(negative_remainder);
+        return 1;
+    }
+    else if( numerator.sign == -1 )
+    {
+        positive_numerator = bi_init(0);
+        negative_quotient = bi_init(0);
+        negative_remainder = bi_init(0);
+        bi_copy(&positive_numerator, numerator);
+        bi_negate(&positive_numerator);
+
+        bi_divide(&negative_quotient, &negative_remainder, positive_numerator, denominator);
+        bi_negate(&negative_quotient);
+        bi_copy(quo, negative_quotient);
+
+        bi_negate(&negative_remainder);
+        bi_add(rem, negative_remainder, denominator);
+
+        one = bi_init(0);
+        bi_one(&one);
+        temp = bi_init(0);
+        bi_copy(&temp, *quo);
+        bi_subtract(quo, temp, one);
+        bi_destroy(temp);
+        bi_destroy(one);
+
+        bi_destroy(positive_numerator);
+        bi_destroy(negative_remainder);
+        bi_destroy(negative_quotient);
+        return 1;
+    }
+    else if( denominator.sign == -1 )
+    {
+        positive_denominator = bi_init(0);
+        bi_copy(&positive_denominator, denominator);
+        bi_negate(&positive_denominator);
+
+        bi_divide(quo, rem, numerator, positive_denominator);
+        bi_negate(quo);
+
+        bi_destroy(positive_denominator);
+        return 1;
+    }
+    else if( bi_compare(numerator, denominator) < 0 )
+    {
+        bi_copy(rem, numerator);
+        bi_zero(quo);
+        return 1;
+    }
 
     if( bi_is_one(denominator) )
     {
@@ -707,11 +812,24 @@ int bi_divide( bi * quo, bi * rem, bi numerator, bi denominator )
     bitsize_denominator = bi_bitsize(denominator);
     bitsize_difference = bitsize_numerator - bitsize_denominator;
     bi_copy(rem, numerator);
-    shifted = bi_init(numerator.num_limbs * sizeof(unsigned long int) * 8);
+    shifted = bi_init(0);
+
+    bi_shift_left(&shifted, denominator, bitsize_difference);
+
+    if( quo->num_limbs < (bitsize_difference + sizeof(unsigned long int)*8 - 1)/(sizeof(unsigned long int)*8) )
+    {
+        quo->num_limbs = (bitsize_difference + sizeof(unsigned long int)*8 - 1)/(sizeof(unsigned long int)*8);
+        free(quo->data);
+        quo->data = malloc(quo->num_limbs * sizeof(unsigned long int));
+    }
+    for( i = 0 ; i < quo->num_limbs ; ++i )
+    {
+        quo->data[i] = 0;
+    }
+    quo->sign = 1;
 
     for( i = bitsize_difference ; i >= 0 ; --i )
     {
-        bi_shift_left(&shifted, denominator, i);
         cmp = bi_compare(*rem, shifted);
         if( cmp < 0 )
         {
@@ -726,9 +844,13 @@ int bi_divide( bi * quo, bi * rem, bi numerator, bi denominator )
         {
             bi_setbit(quo, i, 1);
             bi_subtract(rem, *rem, shifted);
+            bi_destroy(shifted);
             return 1;
         }
+        bi_shift_right(&shifted, 1);
     }
+
+    bi_destroy(shifted);
 
     return 1;
 }
@@ -766,7 +888,7 @@ int bi_setbit( bi * integer, int bit_index, char bit )
         integer->num_limbs = limb_index + 1;
     }
 
-    mask = 1 << bit_index;
+    mask = (unsigned long int)1 << bit_index;
 
     if( bit == 1 )
     {
@@ -779,8 +901,6 @@ int bi_setbit( bi * integer, int bit_index, char bit )
 
     return 1;
 }
-
-int bi_xgcd( bi * g, bi * a, bi * b, bi x, bi y );
 
 /**
  * bi_compare_absolute
@@ -827,7 +947,9 @@ int bi_compare_absolute( bi lhs, bi rhs )
 int bi_compare( bi lhs, bi rhs )
 {
     int abscmp;
+
     abscmp = bi_compare_absolute(lhs,rhs);
+
     if( abscmp == 0 )
     {
         if( lhs.sign == rhs.sign )
@@ -957,44 +1079,84 @@ int bi_bitsize( bi integer )
  */
 int bi_shift_left( bi * dest, bi source, int shamt )
 {
+    int num_bits;
     int num_limbs;
     int i;
     int shamtmod, shamtdiv;
+    unsigned long int  * data;
 
     if( shamt < 0 )
     {
         return 1;
     }
 
+    if( shamt == 0 )
+    {
+        return bi_copy(dest, source);
+    }
+
+    num_bits = bi_bitsize(source);
     shamtmod = shamt % (sizeof(unsigned long int)*8);
     shamtdiv = shamt / (sizeof(unsigned long int)*8);
-    num_limbs = 1+source.num_limbs+shamtdiv;
+    num_limbs = (shamt + num_bits + sizeof(unsigned long int)*8 - 1) / (sizeof(unsigned long int)*8);
 
-    free(dest->data);
-    dest->num_limbs = num_limbs;
-    dest->data = malloc(sizeof(unsigned long int) * num_limbs);
-
-    for( i = 0 ; i < num_limbs ; ++i )
-    {
-        dest->data[i] = 0;
-    }
-    for( i = 0 ; i < source.num_limbs ; ++i )
-    {
-        dest->data[shamtdiv+i] = source.data[i] << shamtmod;
-    }
-    for( i = 0 ; i < source.num_limbs ; ++i )
-    {
-        dest->data[shamtdiv+i+1] = dest->data[shamtdiv+1+i] | (source.data[i] >> (sizeof(unsigned long int)*8 - shamtmod));
-    }
+        dest->num_limbs = num_limbs;
+        data = malloc(sizeof(unsigned long int) * num_limbs);
     dest->sign = source.sign;
+    for( i = 0 ; i < dest->num_limbs ; ++i )
+    {
+        data[i] = 0;
+    }
+    for( i = 0 ; i < source.num_limbs && i < dest->num_limbs ; ++i )
+    {
+        data[shamtdiv+i] = source.data[i] << shamtmod;
+    }
+    for( i = 0 ; i < source.num_limbs && i+shamtdiv+1 < dest->num_limbs ; ++i )
+    {
+        data[shamtdiv+i+1] = data[shamtdiv+1+i] | (source.data[i] >> (sizeof(unsigned long int)*8 - shamtmod));
+    }
 
     for( dest->num_limbs = dest->num_limbs ; dest->num_limbs > 0 ; --dest->num_limbs )
     {
-        if( dest->data[dest->num_limbs-1] != 0 )
+        if( data[dest->num_limbs-1] != 0 )
         {
             break;
         }
     }
+
+    free(dest->data);
+    dest->data = data;
+
+    return 1;
+}
+
+/**
+ * bi_shift_right
+ * Shift the given to the right, and drop the rightmost bits.
+ */
+int bi_shift_right( bi * op, int shamt )
+{
+    int shamtdiv, shamtmod;
+    int i;
+
+    shamtdiv = shamt / (sizeof(unsigned long int)*8);
+    shamtmod = shamt % (sizeof(unsigned long int)*8);
+
+    for( i = 0 ; i < op->num_limbs - shamtdiv ; ++i )
+    {
+        op->data[i] = op->data[i+shamtdiv];
+    }
+    for( i = op->num_limbs - shamtdiv ; i < op->num_limbs ; ++i )
+    {
+        op->data[i] = 0;
+    }
+    op->num_limbs = op->num_limbs - shamtdiv;
+
+    for( i = 0 ; i < op->num_limbs-1 ; ++i )
+    {
+        op->data[i] = (op->data[i] >> shamtmod) | (op->data[i+1] << (sizeof(unsigned long int)*8 - shamtmod));
+    }
+    op->data[op->num_limbs-1] = op->data[op->num_limbs-1] >> shamtmod;
 
     return 1;
 }
@@ -1003,19 +1165,21 @@ int bi_shift_left( bi * dest, bi source, int shamt )
  * bi_random
  * Generate a random integer from the given string of random bytes.
  */
-int bi_random( bi * dest, unsigned int num_bits, char * randomness )
+int bi_random( bi * dest, unsigned int num_bits, unsigned char * randomness )
 {
     unsigned int num_limbs;
     int rem;
     int i;
     num_limbs = (num_bits + sizeof(unsigned long int)*8 - 1) / (sizeof(unsigned long int)*8);
-    
-    free(dest->data);
-    dest->data = malloc(num_limbs * sizeof(unsigned long int));
-    dest->num_limbs = num_limbs;
+   
+    if( dest->num_limbs != num_limbs )
+    { 
+        free(dest->data);
+        dest->data = malloc(num_limbs * sizeof(unsigned long int));
+        dest->num_limbs = num_limbs;
+    }
     dest->sign = 1;
 
-    //memcpy((unsigned char*)dest->data, randomness, (num_bits + 7) / 8);
     for( i = 0 ; i < dest->num_limbs ; ++i )
     {
         dest->data[i] = ((unsigned long int*)randomness)[i];
@@ -1031,13 +1195,391 @@ int bi_random( bi * dest, unsigned int num_bits, char * randomness )
     return 1;
 }
 
-int bi_modulo( bi * res, bi integer, bi modulus );
-int bi_modcent( bi * res, bi integer, bi modulus );
-int bi_naf( bi * respos, bi * resneg, bi source );
-int bi_modexp( bi * res, bi base, bi power, bi modulus );
-int bi_modinverse( bi * res, bi element, bi modulus );
-int bi_isprime( bi integer, char randomseed[SEED_LENGTH], int certainty );
+/**
+ * bi_modulo
+ * Compute the remainder of the given integer after division by the
+ * modulus.
+ */
+int bi_modulo( bi * res, bi integer, bi modulus )
+{
+    bi quotient;
+    quotient = bi_init(0);
+    bi_divide(&quotient, res, integer, modulus);
+    bi_destroy(quotient);
+    return 1;
+}
 
+/**
+ * bi_xgcd
+ * Compute the greatest common divisor and Bezout coefficients using
+ * the extended Euclidean algorithm. In other words, find (x,y,g)
+ * such that  x*a + y*b = g = gcd(a,b).
+ * @returns:
+ *  x : big integer -- Bezout coefficient for a
+ *  y : big integer -- Bezout coefficient for b
+ *  g : bit integer -- greatest common divisor
+ */
+int bi_xgcd( bi * x, bi * y, bi * g, bi a, bi b )
+{
+    bi r, s, t, old_r, old_s, old_t, quotient, temp, temp2;
+
+    r = bi_init(0);
+    s = bi_init(0);
+    t = bi_init(0);
+    quotient = bi_init(0);
+    old_r = bi_init(0);
+    old_s = bi_init(0);
+    old_t = bi_init(0);
+    temp = bi_init(0);
+    temp2 = bi_init(0);
+
+    bi_zero(&s);
+    bi_one(&old_s);
+    bi_one(&t);
+    bi_zero(&old_t);
+    bi_copy(&r, b);
+    bi_copy(&old_r, a);
+
+    while( !bi_is_zero(r) )
+    {
+        bi_divide(&quotient, &temp, old_r, r);
+
+        bi_copy(&old_r, r);
+        bi_copy(&r, temp);
+
+        bi_copy(&temp2, old_s);
+        bi_copy(&old_s, s);
+        bi_multiply(&temp, quotient, s);
+        bi_subtract(&s, temp2, temp);
+
+        bi_copy(&temp2, old_t);
+        bi_copy(&old_t, t);
+        bi_multiply(&temp, quotient, t);
+        bi_subtract(&t, temp2, temp);
+    }
+
+    bi_copy(x, old_s);
+    bi_copy(y, old_t);
+    bi_copy(g, old_r);
+
+    bi_destroy(s);
+    bi_destroy(t);
+    bi_destroy(r);
+    bi_destroy(old_s);
+    bi_destroy(old_t);
+    bi_destroy(old_r);
+    bi_destroy(quotient);
+    bi_destroy(temp);
+    bi_destroy(temp2);
+
+    return 1;
+}
+
+/**
+ * bi_modcent
+ * Compute the representative of the given integer modulo the modulus
+ * inside the range [-floor(modulus/2):floor(modulus/2)].
+ */
+int bi_modcent( bi * res, bi integer, bi modulus )
+{
+    bi modover2;
+    modover2 = bi_init(0);
+    bi_copy(&modover2, modulus);
+    bi_shift_right(&modover2, 1);
+
+    bi_modulo(res, integer, modulus);
+
+    if( bi_compare(integer, modover2) > 0 )
+    {
+        bi_copy(&modover2, *res);
+        bi_subtract(res, modover2, modulus);
+    }
+
+    bi_destroy(modover2);
+
+    return 1;
+}
+
+/**
+ * bi_naf
+ * Convert the given integer to non-adjacent form (NAF), namely to a
+ * pair of integers (pos, neg) such that source = pos - neg and both
+ * pos and neg have low hamming weight.
+ */
+int bi_naf( bi * respos, bi * resneg, bi source )
+{
+    int i, j;
+
+    bi oneshift;
+
+    oneshift = bi_init(1);
+    bi_one(&oneshift);
+
+    bi_copy(respos, source);
+    bi_zero(resneg);
+
+    for( i = 0 ; i < bi_bitsize(source) - 4 ; ++i )
+    {
+        if( bi_getbit(*respos, i) == 1 && bi_getbit(*respos, i+1) == 1  && bi_getbit(*respos, i+2) == 1 && bi_getbit(*respos, i+3) == 1 && bi_getbit(*respos, i+4) == 1 )
+        {
+            bi_add(respos, *respos, oneshift);
+            bi_add(resneg, *resneg, oneshift);
+            i = i + 4;
+        }
+
+        bi_shift_left(&oneshift, oneshift, 1);
+    }
+
+    bi_destroy(oneshift);
+    return 1;
+}
+
+/**
+ * bi_modexp
+ * Raise the base to the given power but compute only the residue of
+ * that function modulo the modulus. Uses the square-and-multiply
+ * routine.
+ */
+int bi_modexp( bi * res, bi base, bi power, bi modulus )
+{
+    int bitsize;
+    int i;
+    bi temp, temp2;
+    bi posones, negones;
+    bi inverse;
+
+    if( power.sign == -1 )
+    {
+        inverse = bi_init(0);
+        bi_modinverse(&inverse, base, modulus);
+        temp2 = bi_init(0);
+        bi_copy(&temp2, power);
+        bi_negate(&temp2);
+        bi_modexp(res, inverse, temp2, modulus);
+        bi_destroy(inverse);
+        bi_destroy(temp2);
+        return 1;
+    }
+
+    temp = bi_init(0);
+    posones = bi_init(0);
+    negones = bi_init(0);
+    bi_naf(&posones, &negones, power);
+    inverse = bi_init(0);
+    bi_modinverse(&inverse, base, modulus);
+    bi_one(res);
+
+    bitsize = bi_bitsize(power);
+    for( i = bitsize ; i >= 0 ; --i )
+    {
+        bi_multiply(&temp, *res, *res);
+        bi_modulo(res, temp, modulus);
+
+        /*
+        if( bi_getbit(power, i) == 1 )
+        {
+            bi_multiply(&temp, *res, base);
+            bi_modulo(res, temp, modulus);
+        }
+        */
+
+        
+        if( bi_getbit(posones, i) == 1 )
+        {
+            bi_multiply(&temp, *res, base);
+            bi_modulo(res, temp, modulus);
+        }
+        
+
+        
+        if( bi_getbit(negones, i) == 1 )
+        {
+            bi_multiply(&temp, *res, inverse);
+            bi_modulo(res, temp, modulus);
+        }
+        
+    }
+
+    bi_destroy(temp);
+    bi_destroy(inverse);
+    bi_destroy(posones);
+    bi_destroy(negones);
+
+    return 1;
+}
+
+/**
+ * bi_modinverse
+ * Compute the multiplicative inverse of some element modulo the
+ * modulus. If no multiplicative inverse exists, this function will
+ * return zero and offers no guarantee on the contents of res.
+ */
+int bi_modinverse( bi * res, bi element, bi modulus )
+{
+    int gcd_return;
+    bi g, y;
+    g = bi_init(0);
+    y = bi_init(1);
+
+    bi_xgcd(res, &y, &g, element, modulus);
+
+    gcd_return = (g.data[0] == 1);
+
+    bi_destroy(g);
+    bi_destroy(y);
+
+    return gcd_return;
+}
+
+/**
+ * bi_miller_rabin_trial
+ * Perform a single Miller-Rabin trial of the integer with base as
+ * test.
+ */
+int bi_miller_rabin_trial( bi integer, bi base )
+{
+    bi nm1, one, two;
+    bi d, x, temp;
+    int i, r;
+
+    d = bi_init(0);
+    nm1 = bi_init(0);
+    one = bi_cast(1);
+    two = bi_cast(2);
+    bi_subtract(&nm1, integer, one);
+
+    for( r = 0 ; r < bi_bitsize(nm1) ; ++r )
+    {
+        if( bi_getbit(nm1, r) == 1 )
+        {
+            break;
+        }
+    }
+    bi_copy(&d, nm1);
+    bi_shift_right(&d, r-1);
+
+    x = bi_init(0);
+    bi_modexp(&x, base, d, integer);
+
+    if( bi_is_one(x) == 1 )
+    {
+        bi_destroy(x);
+        bi_destroy(nm1);
+        bi_destroy(d);
+        bi_destroy(one);
+        bi_destroy(two);
+        return 1;
+    }
+
+    if( bi_compare(x, nm1) == 0 )
+    {
+        bi_destroy(x);
+        bi_destroy(nm1);
+        bi_destroy(d);
+        bi_destroy(one);
+        bi_destroy(two);
+        return 1;
+    }
+
+    temp = bi_init(0);
+    for( i = 0 ; i < r-1 ; ++i )
+    {
+        bi_copy(&temp, x);
+        bi_modexp(&x, temp, two, integer);
+        if( bi_is_one(x) )
+        {
+            bi_destroy(x);
+            bi_destroy(nm1);
+            bi_destroy(d);
+            bi_destroy(one);
+            bi_destroy(two);
+            return 0;
+        }
+    }
+
+    bi_destroy(x);
+    bi_destroy(nm1);
+    bi_destroy(d);
+    bi_destroy(one);
+    bi_destroy(two);
+    bi_destroy(temp);
+    return 1;
+}
+
+/**
+ * is_prime
+ * Test probabilistically if the given integer is a prime or not.
+ * Use the Miller-Rabin primality test, which passes composites with
+ * probability at most 1/4 per trial for the number of trials equal
+ * to certainty.
+ * @params:
+ *  * integer : big integer -- determine if this is a prime or not
+ *  * random_ints : pointer to list of unsigned long int -- list of
+ *    random challenge numbers; this list contains certainty
+ *    elements.
+ *  * certainty : int -- number of trials to run
+ * @returns:
+ *  * 1 if integer is prime; 0 otherwise. With probability
+ *    no more than (1/4)^certainty this algorithm return 1 for a
+ *    composite number.
+ */
+int bi_is_prime( bi integer, unsigned long int * random_ints, int certainty )
+{
+    bi base, mod6;
+    int i;
+    int composite;
+
+    /* negative numbers can't be prime */
+    if( integer.sign == -1 )
+    {
+        return 0;
+    }
+
+    /* filter out small integers */
+    if( integer.num_limbs == 1 )
+    {
+        if( integer.data[0] == 1 )
+        {
+            return 0;
+        }
+        if( integer.data[0] == 2 || integer.data[0] == 3 )
+        {
+            return 1;
+        }
+    }
+
+    /* make sure the integer is 1 or -1 modulo 6 */
+    base = bi_cast(6);
+    mod6 = bi_init(3);
+    bi_modulo(&mod6, integer, base);
+    bi_destroy(base);
+    if( mod6.data[0] != 1 && mod6.data[0] != 5 )
+    {
+        bi_destroy(mod6);
+        return 0;
+    }
+    bi_destroy(mod6);
+
+    /* run Miller-Rabin trials */
+    composite = 0;
+    for( i = 0 ; i < certainty ; ++i )
+    {
+        base = bi_cast(random_ints[i]);
+        composite = bi_miller_rabin_trial(integer, base);
+        bi_destroy(base);
+        if( composite == 0 )
+        {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * bi_getbit
+ * Get the ith bit of the given integer.
+ */
 int bi_getbit( bi integer, int bit_index )
 {
     int limb_index;

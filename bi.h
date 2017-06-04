@@ -41,10 +41,11 @@ int bi_modexp( bi * res, bi base, bi power, bi modulus );
 int bi_bitsize( bi integer );
 int bi_setbit( bi * integer, int bit_index, char bit );
 int bi_getbit( bi integer, int bit_index );
-int bi_random( bi * dest, unsigned int num_bits, char * randomness );
-int bi_isprime( bi integer, char randomseed[SEED_LENGTH], int certainty );
+int bi_random( bi * dest, unsigned int num_bits, unsigned char * randomness );
+int bi_is_prime( bi integer, unsigned long int * random_ints, int certainty );
 int bi_print( bi integer );
 int bi_shift_left( bi * dest, bi src, int shamt );
+int bi_shift_right( bi * op, int shamt );
 
 #endif
 

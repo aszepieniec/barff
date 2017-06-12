@@ -189,7 +189,7 @@ int test_divide( unsigned int * random )
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)random);
     csprng_generate(&rng, sizeof(unsigned int), (unsigned char*) random);
 
-    k = 100 + (csprng_generate_ulong(&rng) % 1000);
+    k = 1000 + (csprng_generate_ulong(&rng) % 1000);
     l = 100 + (csprng_generate_ulong(&rng) % (k-100));
 
     printf("k = %i  l = %i ... ", k, l);
@@ -233,6 +233,9 @@ int test_divide( unsigned int * random )
         printf("remainder sign: %i\n", remainder.sign);
         printf("sum: "); bi_print_bitstring(sum); printf("\n");
         printf("num: "); bi_print_bitstring(numerator); printf("\n");
+        printf("quotient: "); bi_print_bitstring(quotient); printf("\n");
+        printf("divisor: "); bi_print_bitstring(divisor); printf("\n");
+        printf("remainder: "); bi_print_bitstring(remainder); printf("\n");
     }
     else
     {
@@ -306,6 +309,16 @@ int test_xgcd( unsigned int * random )
 
     cmp = bi_compare(xayb, g);
 
+    /*
+    printf("x = int('"); bi_print_bitstring(x); printf("',2)\n");
+    printf("a = int('"); bi_print_bitstring(a); printf("',2)\n");
+    printf("y = int('"); bi_print_bitstring(y); printf("',2)\n");
+    printf("b = int('"); bi_print_bitstring(b); printf("',2)\n");
+    printf("g = int('"); bi_print_bitstring(g); printf("',2)\n");
+
+    printf("xa+yb = int('"); bi_print_bitstring(xayb); printf("',2)\n");
+    */
+
     if( cmp != 0 )
     {
         printf("failure.\n");
@@ -336,8 +349,10 @@ int test_modexp( unsigned int * random )
     int cmp, success;
     unsigned char * randomness;
 
+    //*random = 3503624068;
+
     success = 0;
-    printf("testing modpow (%u) ... ", *random);
+    printf("testing modexp (%u) ... ", *random);
 
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)random);
@@ -355,8 +370,8 @@ int test_modexp( unsigned int * random )
 
     printf("k = %i  l = %i ... ", k, l);
 
-    randomness = malloc(k/8 + sizeof(unsigned long int));
-    csprng_generate(&rng, k/8 + sizeof(unsigned long int), randomness);
+    randomness = malloc((k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int));
+    csprng_generate(&rng, (k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int), randomness);
     bi_random(&a, k, randomness);
     free(randomness);
     if( csprng_generate_ulong(&rng) % 2 == 1 )
@@ -364,8 +379,8 @@ int test_modexp( unsigned int * random )
         bi_negate(&a);
     }
 
-    randomness = malloc(k/8 + sizeof(unsigned long int));
-    csprng_generate(&rng, k/8 + sizeof(unsigned long int), randomness);
+    randomness = malloc((k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int));
+    csprng_generate(&rng, (k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int), randomness);
     b = bi_init(0);
     bi_random(&b, k, randomness);
     free(randomness);
@@ -374,8 +389,8 @@ int test_modexp( unsigned int * random )
         bi_negate(&b);
     }
 
-    randomness = malloc(k/8 + sizeof(unsigned long int));
-    csprng_generate(&rng, k/8 + sizeof(unsigned long int), randomness);
+    randomness = malloc((k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int));
+    csprng_generate(&rng, (k/(8 * sizeof(unsigned long int)) + 1) * 8 * sizeof(unsigned long int), randomness);
     bi_random(&g, k, randomness);
     free(randomness);
     if( csprng_generate_ulong(&rng) % 2 == 1 )
@@ -467,6 +482,9 @@ int test_naf( unsigned int * random )
     else
     {
         printf("failure.\n");
+        printf("power: "); bi_print_bitstring(a); printf("\n");
+        printf("posones: "); bi_print_bitstring(b); printf("\n");
+        printf("negones: "); bi_print_bitstring(c); printf("\n");
     }
 
     bi_destroy(a);
@@ -474,7 +492,7 @@ int test_naf( unsigned int * random )
     bi_destroy(c);
     bi_destroy(temp);
 
-    return 1;
+    return success;
 }
 
 int test_primality( unsigned int * random )
@@ -499,8 +517,20 @@ int test_primality( unsigned int * random )
     bi_shift_left(&b, p, 256);
     a = bi_cast(1539);
     bi_subtract(&p, b, a); /* sets p to 2^256 - 1539 */
+ 
+    random_ints = malloc(sizeof(unsigned long int) * 20);
+    csprng_generate(&rng, 20 * sizeof(unsigned long int), (unsigned char *)random_ints);
+    if( bi_is_prime(p, random_ints, 20) == 0 )
+    {
+        printf("failure. Did not recognize legit prime.\n");
+        printf("prime: "); bi_print_bitstring(p); printf("\n");
+        bi_destroy(p);
+        bi_destroy(b);
+        bi_destroy(a);
+        return 0;
+    }
 
-    k = 100 + (csprng_generate_ulong(&rng) % 100);
+    k = 101 + (csprng_generate_ulong(&rng) % 100);
     l = 100 + (csprng_generate_ulong(&rng) % (k-100));
 
     printf("k = %i  l = %i ... ", k, l);
@@ -523,19 +553,13 @@ int test_primality( unsigned int * random )
         bi_negate(&b);
     }
 
-    random_ints = malloc(sizeof(unsigned long int) * 50);
-    csprng_generate(&rng, 50 * sizeof(unsigned long int), (unsigned char *)random_ints);
-    if( bi_is_prime(p, random_ints, 50) == 0 )
-    {
-        printf("failure. Did not recognize legit prime.\n");
-        success = 0;
-    }
-
+    random_ints = malloc(sizeof(unsigned long int) * 20);
     bi_multiply(&p, a, b);
-    csprng_generate(&rng, 50 * sizeof(unsigned long int), (unsigned char *)random_ints);
-    if( bi_is_prime(p, random_ints, 50) == 1 )
+    csprng_generate(&rng, 20 * sizeof(unsigned long int), (unsigned char *)random_ints);
+    if( bi_is_prime(p, random_ints, 20) == 1 )
     {
         printf("Failure. Failed to recognize legit composite.\n");
+        printf("composite: "); bi_print_bitstring(p); printf("\n");
         success = 0;
     }
 
@@ -565,13 +589,13 @@ int main( int argc, char ** argv )
     printf("randomness: %u\n", random);
 
     b = 1;
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_addition(&random);
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_multiplication(&random);
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_divide(&random);
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_xgcd(&random);
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_modexp(&random);
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_naf(&random);
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_primality(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_addition(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiplication(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_divide(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_xgcd(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_modexp(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_naf(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_primality(&random);
 
     if( b == 1 )
     {

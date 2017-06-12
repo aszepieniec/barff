@@ -59,6 +59,11 @@ int main( int argc, char ** argv )
 
     printf("done.\n");
 
+    if( num_trials == 1 )
+    {
+        printf("p = int('"); bi_print_bitstring(p); printf("', 2)\n");
+    }
+
     bi_destroy(p);
     free(randomness);
 

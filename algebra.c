@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifndef BIG
+
 /**
  * xgcd
  * Computes the Bezout relation
@@ -38,22 +40,7 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
     return *gcd;
 }
 
-/**
- * gf_inverse
- * Computes the multiplicative inverse of a field element.
- */
-gfp_element gf_inverse( gfp_element element )
-{
-    int a;
-    int b;
-    int x, y, g;
-
-    a = element;
-    b = GF_PRIME_MODULUS;
-    xgcd(a, b, &x, &y, &g);
-    x = (GF_PRIME_MODULUS + (x % GF_PRIME_MODULUS)) % GF_PRIME_MODULUS;
-    return x;
-}
+#endif
 
 /**
  * gfpm
@@ -74,6 +61,7 @@ gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element* pdata )
  */
 gfpmatrix gfpm_init( unsigned  int height, unsigned  int width )
 {
+    int i, j;
     gfpmatrix mat;
     mat.width = width;
     mat.height = height;
@@ -81,6 +69,13 @@ gfpmatrix gfpm_init( unsigned  int height, unsigned  int width )
     /*
     printf("created gfpm object with data member set to memory address %#010x\n", mat.data);
     */
+    for( i = 0 ; i < height ; ++i )
+    {
+        for( j = 0 ; j < width ; ++j )
+        {
+            mat.data[i*width + j] = gfp_init(0);
+        }
+    }
     return mat;
 }
 
@@ -267,13 +262,16 @@ int gfpm_random( gfpmatrix random, unsigned char * randomness )
     unsigned  int i, j;
     unsigned int l;
     unsigned int * rand = (unsigned int *)randomness;
+    unsigned int num_limbs;
+    num_limbs = (GFP_NUMBITS + sizeof(unsigned long int)*8 - 1) / (sizeof(unsigned long int)*8);
    
     l = 0;
     for( i = 0 ; i < random.height ; ++i )
     {
         for( j = 0 ; j < random.width ; ++j )
         {
-            gfp_random(&random.data[i*random.width + j], &randomness[(l++)*(GFP_NUMBYTES+1)]);
+            gfp_random(&random.data[i*random.width + j], randomness + l*num_limbs*sizeof(unsigned long int));
+            l = l + 1;
         }
     }
 
@@ -795,15 +793,17 @@ int gfpm_redech( gfpmatrix mat )
 {
     unsigned  int col, row, i;
     gfp_element inv;
+    gfp_element diff;
 
     inv = gfp_init(1);
+    diff = gfp_init(1);
 
     row = 0;
     for( col = 0 ; col < mat.width ; ++col )
     {
         for( i = row ; i < mat.height ; ++i )
         {
-            if( mat.data[i*mat.width + col] != 0 )
+            if( gfp_is_zero(mat.data[i*mat.width + col]) != 1 )
             {
                 if( i != row )
                 {
@@ -820,7 +820,7 @@ int gfpm_redech( gfpmatrix mat )
 
         gfp_inverse(&inv, mat.data[row*mat.width + col]);
         
-        if( inv != 1 )
+        if( gfp_is_one(inv) != 1 )
         {
             gfpm_scalerow(mat, row, inv);
         }
@@ -831,7 +831,8 @@ int gfpm_redech( gfpmatrix mat )
             {
                 continue;
             }
-            gfpm_rowop(mat, i, row, (GF_PRIME_MODULUS - mat.data[i*mat.width + col]) % GF_PRIME_MODULUS, col);
+            gfp_negate(&diff, mat.data[i*mat.width + col]);
+            gfpm_rowop(mat, i, row, diff, col);
         }
 
         row = row + 1;
@@ -843,6 +844,7 @@ int gfpm_redech( gfpmatrix mat )
     }
 
     gfp_destroy(inv);
+    gfp_destroy(diff);
 
     return 1;
 }
@@ -869,7 +871,7 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
 {
     /* declare variables for echelon reduction */
     unsigned  int col, row, i, j;
-    gfp_element inv, zero, one, minusone;
+    gfp_element inv, zero, one, minusone, neg;
     gfpmatrix mat;
 
     /* declare variables for pivot tracking */
@@ -883,6 +885,7 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
     zero = gfp_init(1);
     one = gfp_init(1);
     minusone = gfp_init(1);
+    neg = gfp_init(1);
 
     gfp_zero(&zero);
     gfp_one(&one);
@@ -950,7 +953,8 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
             {
                 continue;
             }
-            gfpm_rowop(mat, i, row, (GF_PRIME_MODULUS - mat.data[i*mat.width + col]) % GF_PRIME_MODULUS, col);
+            gfp_negate(&neg, mat.data[i*mat.width + col]);
+            gfpm_rowop(mat, i, row, neg, col);
         }
 
         row = row + 1;
@@ -1008,6 +1012,7 @@ int gfpm_solve( gfpmatrix coeffs, gfpmatrix target, gfpmatrix solution, gfpmatri
     gfp_destroy(zero);
     gfp_destroy(one);
     gfp_destroy(minusone);
+    gfp_destroy(neg);
 
     return have_solution;
 }
@@ -1190,7 +1195,7 @@ int gfpm_inverse( gfpmatrix inv, gfpmatrix mat )
     invertible = 1;
     for( i = 0 ; i < inv.height ; ++i )
     {
-        invertible = invertible & (int)(concat.data[i*concat.width + i]);
+        invertible = invertible & gfp_is_one(concat.data[i*concat.width + i]);
     }
 
     if( 0 == invertible )

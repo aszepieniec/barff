@@ -1,4 +1,3 @@
-#include "gfp.h"
 #include "algebra.h"
 #include "csprng.h"
 
@@ -129,7 +128,6 @@ int test_multiply_transpose( )
     csprng rng;
     unsigned int random;
     unsigned char * randomness;
-    int num_limbs;
 
     random = rand();
     csprng_init(&rng);
@@ -145,14 +143,13 @@ int test_multiply_transpose( )
     C1 = gfpm_init(n, n);
     C2 = gfpm_init(n, n);
 
-    num_limbs = (n*m*(GFP_NUMBITS + sizeof(unsigned long int)*8 - 1)) / (sizeof(unsigned long int) * 8);
-    randomness = malloc(num_limbs*sizeof(unsigned long int));
-    csprng_generate(&rng, (num_limbs*sizeof(unsigned long int)), randomness);
+    randomness = malloc(n*m*sizeof(unsigned int));
+    csprng_generate(&rng, n*m*sizeof(unsigned int), randomness);
     gfpm_random(A, randomness);
-    csprng_generate(&rng, (num_limbs*sizeof(unsigned long int)), randomness);
+    csprng_generate(&rng, n*m*sizeof(unsigned int), randomness);
     gfpm_random(B, randomness);
     free(randomness);
-
+    
     gfpm_multiply_transpose(C1, A, B);
     gfpm_transpose(&B);
     gfpm_multiply(C2, A, B);
@@ -427,27 +424,15 @@ int main( int argc, char ** argv )
 {
     unsigned int i;
     unsigned int b;
-#ifdef BIG
-    bi ninetythree;
-    ninetythree = bi_cast(93);
-    prime_modulus = bi_cast(1);
-    bi_shift_left(&prime_modulus, prime_modulus, 257);
-    bi_subtract(&prime_modulus, prime_modulus, ninetythree);
-#endif
     b = 1;
 
     printf("testing basic algebra routines for finite fields ...\n");
 
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_csprng();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_matrix_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_matrix_inverse();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_solve();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_composition();
-
-#ifdef BIG
-    bi_destroy(ninetythree);
-    bi_destroy(prime_modulus);
-#endif
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_solve();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
 
     if( b == 1 )
     {

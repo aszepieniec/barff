@@ -1271,7 +1271,7 @@ int bi_random( bi * dest, unsigned int num_bits, unsigned char * randomness )
         for( j = 0 ; j < sizeof(unsigned long int) && i*sizeof(unsigned long int) + j < num_bytes ; ++j )
         {
             dest->data[i] = dest->data[i] << 8;
-            dest->data[i] = dest->data[i] + randomness[i*sizeof(unsigned long int) + j];
+            dest->data[i] = dest->data[i] | randomness[i*sizeof(unsigned long int) + j];
         }
     }
 
@@ -1292,9 +1292,14 @@ int bi_random( bi * dest, unsigned int num_bits, unsigned char * randomness )
  */
 int bi_modulo( bi * res, bi integer, bi modulus )
 {
-    bi quotient;
+    bi quotient, remainder;
     quotient = bi_init(0);
-    bi_divide(&quotient, res, integer, modulus);
+    remainder = bi_init(0);
+    bi_divide(&quotient, &remainder, integer, modulus);
+    free(res->data);
+    res->data = remainder.data;
+    res->num_limbs = remainder.num_limbs;
+    res->sign = 1;
     bi_destroy(quotient);
     return 1;
 }
@@ -1809,6 +1814,7 @@ int bi_getbit( bi integer, int bit_index )
 /**
  * bi_print
  * Send the decimal representation of this integer to stdout.
+ * TODO: debig
  */
 int bi_print( bi integer )
 {

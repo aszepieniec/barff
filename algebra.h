@@ -4,12 +4,6 @@
 #include "gfp.h"
 
 /**
- * finite field arithmetic
- */
-int xgcd( int x, int y, int* a, int* b, int* c );
-gfp_element gf_inverse( gfp_element element );
-
-/**
  * matrix 
  */
 

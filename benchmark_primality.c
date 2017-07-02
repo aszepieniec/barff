@@ -53,6 +53,7 @@ int main( int argc, char ** argv )
             csprng_generate(&rng, sizeof(unsigned long int) * num_limbs, (unsigned char*)randomness);
             bi_random(&p, bitsize, (unsigned char *)randomness);
             bi_setbit(&p, 0, 1);
+            printf("testing candidate number "); bi_print(p); printf(" for primality ...\n");
         }
         while( bi_is_prime(p, random_ints, certainty) == 0 );
     }

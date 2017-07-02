@@ -564,6 +564,13 @@ int bi_subtract_ignoresign( bi * res, bi lhs, bi rhs )
 int bi_subtract( bi * res, bi lhs, bi rhs )
 {
     int cmp;
+
+    if( bi_is_zero(rhs) == 1 )
+    {
+        bi_copy(res, lhs);
+        return 1;
+    }
+
     cmp = bi_compare_absolute(lhs, rhs);
 
     if( lhs.sign == 1 && rhs.sign == 1 )
@@ -726,7 +733,6 @@ int bi_multiply( bi * res, bi lhs, bi rhs )
     unsigned int i;
     bi product;
 
-    //printf("multiplying lhs %i/%i with rhs %i/%i\n", bi_bitsize(lhs), lhs.num_limbs, bi_bitsize(rhs), rhs.num_limbs);
     if( rhs.num_limbs > lhs.num_limbs )
     {
         return bi_multiply(res, rhs, lhs);
@@ -1275,12 +1281,12 @@ int bi_random( bi * dest, unsigned int num_bits, unsigned char * randomness )
         }
     }
 
-    rem = num_bits % (sizeof(unsigned long int) * 8);
+    rem = num_bits % 8;
     if( rem == 0 )
     {
-        rem = rem + sizeof(unsigned long int) * 8;
+        rem = rem + 8;
     }
-    dest->data[num_limbs-1] = dest->data[num_limbs-1] >> (sizeof(unsigned long int) * 8 - rem);
+    dest->data[num_limbs-1] = dest->data[num_limbs-1] >> (8 - rem);
 
     return 1;
 }
@@ -1339,7 +1345,6 @@ int bi_xgcd( bi * x, bi * y, bi * g, bi a, bi b )
 
     while( !bi_is_zero(r) )
     {
-        //printf("r : %i / %i; s: %i / %i; t: %i / %i\n", bi_bitsize(r), r.num_limbs, bi_bitsize(s), s.num_limbs, bi_bitsize(t), t.num_limbs);
         bi_divide(&quotient, &remainder, old_r, r);
 
         /*
@@ -1347,6 +1352,7 @@ int bi_xgcd( bi * x, bi * y, bi * g, bi a, bi b )
         printf("divisor: "); bi_print_bitstring(r); printf("\n");
         printf("quotient: "); bi_print_bitstring(quotient); printf("\n");
         printf("remainder: "); bi_print_bitstring(remainder); printf("\n");
+        getchar();
         */
 
         /**/
@@ -1814,7 +1820,7 @@ int bi_getbit( bi integer, int bit_index )
 /**
  * bi_print
  * Send the decimal representation of this integer to stdout.
- * TODO: debig
+ * TODO: debug
  */
 int bi_print( bi integer )
 {
@@ -1824,6 +1830,23 @@ int bi_print( bi integer )
     int numdigits;
     int bitsize;
 
+    if( bi_is_zero(integer) == 1 )
+    {
+        printf("0");
+        return 1;
+    }
+
+    if( integer.sign == -1 )
+    {
+        printf("-");
+        rem1 = bi_init(0);
+        bi_copy(&rem1, integer);
+        bi_negate(&rem1);
+        bi_print(rem1);
+        bi_destroy(rem1);
+        return 1;
+    }
+
     bitsize = bi_bitsize(integer);
     expansion = malloc(bi_bitsize(integer));
     numdigits = 0;
@@ -1831,18 +1854,14 @@ int bi_print( bi integer )
     rem1 = bi_init(0);
     rem2 = bi_init(0);
     ten = bi_cast(10);
+
     bi_copy(&rem2, integer);
 
-    if( integer.sign == -1 )
-    {
-        printf("-");
-    }
-
-
-    for( i = 0 ; i < bitsize && bi_is_zero(rem2) == 0 ; ++i )
+    bi_one(&quo);
+    for( i = 0 ; i < bitsize && bi_is_zero(quo) == 0 ; ++i )
     {
         bi_divide(&quo, &rem1, rem2, ten);
-        bi_copy(&rem2, rem1);
+        bi_copy(&rem2, quo);
         expansion[numdigits++] = rem1.data[0];
     }
 

@@ -78,9 +78,10 @@ int test_matrix_inverse( )
     unsigned char buf2[10*10*sizeof(gfp_element)];
     unsigned char buf3[10*10*sizeof(gfp_element)];
 
-    unsigned char randomness[10*10*sizeof(unsigned int)];
+    unsigned char * randomness;
     char * prand;
     int invertible;
+    int num_limbs;
 
     gfpmatrix A, B, C;
 
@@ -96,12 +97,16 @@ int test_matrix_inverse( )
 
     printf("testing matrix inverse ... ");
 
-    csprng_generate(&rng, sizeof(unsigned int)*10*10, randomness);
+    num_limbs = (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);
+    randomness = malloc(sizeof(unsigned long int)*num_limbs*10*10);
+    csprng_generate(&rng, sizeof(unsigned long int)*num_limbs*10*10, randomness);
     gfpm_random(A, randomness);
 
     invertible = gfpm_inverse(B, A);
 
     gfpm_multiply(C, A, B);
+
+    free(randomness);
 
     if( invertible == 0 || gfpm_is_eye(C) )
     {
@@ -211,6 +216,7 @@ int test_solve( )
     csprng rng;
     int success;
     unsigned char * randomness;
+    int num_limbs;
 
     success = 1;
 
@@ -224,15 +230,16 @@ int test_solve( )
     printf("testing matrix equation solver ... ");
 
     A = gfpm_init(m, n);
-    randomness = malloc(m*n*sizeof(unsigned int));
-    csprng_generate(&rng, m*n*sizeof(unsigned int), randomness);
+    num_limbs = (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);
+    randomness = malloc(m*n*sizeof(unsigned long int)*num_limbs);
+    csprng_generate(&rng, m*n*sizeof(unsigned long int)*num_limbs, randomness);
     gfpm_random(A, randomness);
     free(randomness);
     b = gfpm_init(m, 1);
     x = gfpm_init(n, 1);
     
-    randomness = malloc(n*1*sizeof(unsigned int));
-    csprng_generate(&rng, n*1*sizeof(unsigned int), randomness);
+    randomness = malloc(n*1*sizeof(unsigned long int)*num_limbs);
+    csprng_generate(&rng, n*1*sizeof(unsigned long int)*num_limbs, randomness);
     gfpm_random(x, randomness);
     free(randomness);
     gfpm_multiply(b, A, x);
@@ -240,14 +247,16 @@ int test_solve( )
 
 
     s = gfpm_init(n, 1);
+
     gfpm_solve(A, b, s, &K);
 
+    /* get a kernel vector */
     k = gfpm_init(n, 1);
     if( K.width > 0 )
     {
         v = gfpm_init(K.width, 1);
-        randomness = malloc(K.width*1*sizeof(unsigned int));
-        csprng_generate(&rng, K.width*1*sizeof(unsigned int), randomness);
+        randomness = malloc(K.width*1*sizeof(unsigned long int)*num_limbs);
+        csprng_generate(&rng, K.width*1*sizeof(unsigned long int)*num_limbs, randomness);
         gfpm_random(v, randomness);
         free(randomness);
 
@@ -267,9 +276,11 @@ int test_solve( )
 
     if( !gfpm_equals(b, b2) )
     {
-        printf("fail!\n");
+        printf("fail!\n"); getchar();
         printf("A:\n");
         gfpm_print(A);
+        printf("s: ");
+        gfpm_print_transpose(s);
         printf("K:\n");
         gfpm_print(K);
 
@@ -285,12 +296,12 @@ int test_solve( )
         success = 0;
     }
 
-    randomness = malloc(b.height*b.width*sizeof(unsigned int));
-    csprng_generate(&rng, b.height*b.width*sizeof(unsigned int), randomness);
+    randomness = malloc(b.height*b.width*sizeof(unsigned long int)*num_limbs);
+    csprng_generate(&rng, b.height*b.width*sizeof(unsigned long int)*num_limbs, randomness);
     gfpm_random(b, randomness);
     free(randomness);
     gfpm_destroy(K);
-    if( gfpm_solve(A, b, x, &K) )
+    if( gfpm_solve(A, b, x, &K) && success == 1 )
     {
         gfpm_multiply(b2, A, x);
         if( !gfpm_equals(b, b2) )
@@ -335,6 +346,7 @@ int test_composition( )
     csprng rng;
     unsigned int random;
     unsigned char * randomness;
+    int num_limbs;
 
     random = rand();
     csprng_init(&rng);
@@ -344,35 +356,33 @@ int test_composition( )
     printf("testing composition of linear transforms with homogeneous quadratic systems ... ");
 
 
-    m = 10;
-    n = 15;
+    m = 3;
+    n = 5;
 
     F = hqs_init(n, m);
-    randomness = malloc((GFP_NUMBYTES+1) * m * n * n);
-    csprng_generate(&rng, (GFP_NUMBYTES+1)* m * n * n, randomness);
+    num_limbs = (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);
+    randomness = malloc(num_limbs * sizeof(unsigned long int) * m * n * n);
+    csprng_generate(&rng, num_limbs * sizeof(unsigned long int)* m * n * n, randomness);
     hqs_random(F, randomness);
     free(randomness);
     P = hqs_clone(F);
-    
-
 
     T = gfpm_init(m, m);
     S = gfpm_init(n, n);
 
 
-    randomness = malloc((GFP_NUMBYTES+1)* m * m);
-    csprng_generate(&rng, (GFP_NUMBYTES+1)* m * m, randomness);
+    randomness = malloc(num_limbs * sizeof(unsigned long int) * m * m);
+    csprng_generate(&rng, num_limbs * sizeof(unsigned long int) * m * m, randomness);
     gfpm_random_invertible(T, randomness);
     free(randomness);
-    randomness = malloc((GFP_NUMBYTES+1)* n * n);
-    csprng_generate(&rng, (GFP_NUMBYTES+1)* n * n, randomness);
+    randomness = malloc(num_limbs * sizeof(unsigned long int) * n * n);
+    csprng_generate(&rng, num_limbs * sizeof(unsigned long int)* n * n, randomness);
     gfpm_random_invertible(S, randomness);
     free(randomness);
 
-
     hqs_compose_output(T, P);
-    hqs_compose_input(P, S);
 
+    hqs_compose_input(P, S);
 
     x = gfpm_init(n, 1);
     y = gfpm_init(m, 1);
@@ -384,8 +394,8 @@ int test_composition( )
     equal = 1;
     for( i = 0 ; i < 1 && equal == 1 ; ++i )
     {
-        randomness = malloc((GFP_NUMBYTES+1)* x.height * x.width);
-        csprng_generate(&rng, (GFP_NUMBYTES+1)* x.height * x.width, randomness);
+        randomness = malloc(num_limbs * sizeof(unsigned long int) * x.height * x.width);
+        csprng_generate(&rng, num_limbs * sizeof(unsigned long int) * x.height * x.width, randomness);
         gfpm_random(x, randomness);
         free(randomness);
 
@@ -439,10 +449,10 @@ int main( int argc, char ** argv )
     printf("testing basic algebra routines for finite fields ...\n");
 
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_csprng();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_matrix_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_matrix_inverse();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_solve();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_composition();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_solve();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
 
 #ifdef BIG
     bi_destroy(ninetythree);

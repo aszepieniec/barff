@@ -115,7 +115,7 @@ int gfp_inverse( gfp_element * res, gfp_element elm )
     x = bi_init(0);
     y = bi_init(0);
     g = bi_init(0);
-    bi_xgcd(&g, &x, &y, elm, prime_modulus);
+    bi_xgcd(&x, &y, &g, elm, prime_modulus);
     bi_modulo(res, x, prime_modulus);
     bi_destroy(x);
     bi_destroy(y);

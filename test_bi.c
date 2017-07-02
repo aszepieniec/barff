@@ -349,8 +349,6 @@ int test_modexp( unsigned int * random )
     int cmp, success;
     unsigned char * randomness;
 
-    //*random = 3503624068;
-
     success = 0;
     printf("testing modexp (%u) ... ", *random);
 

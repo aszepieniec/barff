@@ -78,6 +78,24 @@ int gfp_compare( gfp_element lhs, gfp_element rhs )
     return 0;
 }
 
+int gfp_is_one( gfp_element elm )
+{
+    if( elm == 1 )
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int gfp_is_zero( gfp_element elm )
+{
+    if( elm == 0 )
+    {
+        return 1;
+    }
+    return 0;
+}
+
 int gfp_add( gfp_element * res, gfp_element lhs, gfp_element rhs )
 {
     *res = ((int)(lhs) + (int)(rhs)) % GF_PRIME_MODULUS;

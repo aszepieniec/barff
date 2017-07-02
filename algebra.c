@@ -48,10 +48,18 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
  */
 gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element* pdata )
 {
+    int i, j;
     gfpmatrix mat;
     mat.height = height;
     mat.width = width;
     mat.data = pdata;
+    for( i = 0 ; i < height ; ++i )
+    {
+        for( j = 0 ; j < width ; ++j )
+        {
+            mat.data[i*width + j] = gfp_init(0);
+        }
+    }
     return mat;
 }
 
@@ -89,9 +97,14 @@ gfpmatrix gfpm_init( unsigned  int height, unsigned  int width )
  */
 int gfpm_destroy( gfpmatrix fm )
 {
-    /*
-    printf("destroying gfpm object with data member set to memory address %#010x\n", fm.data);
-    */
+    int i, j;
+    for( i = 0 ; i < fm.height ; ++i )
+    {
+        for( j = 0 ; j < fm.width ; ++j )
+        {
+            gfp_destroy(fm.data[i*fm.width + j]);
+        }
+    }
     free(fm.data);
     fm.width = 0;
     fm.height = 0;
@@ -817,7 +830,6 @@ int gfpm_redech( gfpmatrix mat )
         {
             continue;
         }
-
         gfp_inverse(&inv, mat.data[row*mat.width + col]);
         
         if( gfp_is_one(inv) != 1 )
@@ -1226,15 +1238,27 @@ int gfpm_inverse( gfpmatrix inv, gfpmatrix mat )
 int gfpm_print( gfpmatrix mat )
 {
     unsigned int i, j;
+    printf("[");
     for( i = 0 ; i < mat.height ; ++i )
     {
+        printf("[");
         for( j = 0 ; j < mat.width ; ++j )
         {
             gfp_print(mat.data[i*mat.width+j]);
-            printf(" ");
+            if( j < mat.width - 1 )
+            {
+                printf(",");
+                printf(" ");
+            }
         }
-        printf("\n");
+        printf("]");
+        if( i < mat.height - 1 )
+        {
+            printf(",");
+            printf("\n");
+        }
     }
+    printf("]\n");
 }
 
 /**
@@ -1280,9 +1304,7 @@ hqsystem hqs_init( unsigned  int n, unsigned  int m )
     hqs.quadratic_forms = malloc(sizeof(gfpmatrix) * m);
     for( i = 0 ; i < m ; ++i )
     {
-        hqs.quadratic_forms[i].data = malloc(n*n*sizeof(gfp_element));
-        hqs.quadratic_forms[i].width = n;
-        hqs.quadratic_forms[i].height = n;
+        hqs.quadratic_forms[i] = gfpm_init(n,n);
     }
     return hqs;
 }
@@ -1373,7 +1395,7 @@ int hqs_random( hqsystem sys, unsigned char * randomness )
             for( j = 0 ; j < sys.n ; ++j )
             {
                 gfp_random(&sys.quadratic_forms[k].data[i*sys.n + j], &randomness[l]);
-                l = l + GFP_NUMBYTES + 1;
+                l = l + (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);
             }
         }
     }

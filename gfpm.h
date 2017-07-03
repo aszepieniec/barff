@@ -1,17 +1,18 @@
-#ifndef ALGEBRA_H
-#define ALGEBRA_H
+#ifndef GFPM_H
+#define GFPM_H
+
+/**
+ * GFPM.H
+ * Routines and structures for matrices over finite fields.
+ */
 
 #include "gfp.h"
 
-/**
- * matrix 
- */
-
-typedef struct 
+typedef struct
 {
-    unsigned  int width;
-    unsigned  int height;
-    gfp_element * data;
+        unsigned  int width;
+            unsigned  int height;
+                gfp_element * data;
 } gfpmatrix;
 
 gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element * pdata );
@@ -49,36 +50,6 @@ int gfpm_slice( gfpmatrix dest, gfpmatrix mat, unsigned  int row_start, unsigned
 int gfpm_inverse( gfpmatrix dest, gfpmatrix mat );
 
 int gfpm_print( gfpmatrix mat );
-
-/**
- * univariate polynomials
- */
-
-typedef struct
-{
-    unsigned  int degree;
-    gfp_element * data;
-} gfpolynomial;
-
-/**
- * (homogeneous) quadratic systems
- */
-typedef struct
-{
-    gfpmatrix * quadratic_forms;
-    unsigned  int n;
-    unsigned  int m;
-} hqsystem;
-
-hqsystem hqs( gfpmatrix* qfs, unsigned  int n, unsigned  int m );
-hqsystem hqs_init( unsigned  int n, unsigned  int m );
-int hqs_destroy( hqsystem sys );
-int hqs_random( hqsystem sys, unsigned char * randomness );
-int hqs_copy( hqsystem dest, hqsystem source );
-hqsystem hqs_clone( hqsystem source );
-int hqs_compose_output( gfpmatrix T, hqsystem P );
-int hqs_compose_input( hqsystem P, gfpmatrix S );
-int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x );
 
 #endif
 

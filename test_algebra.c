@@ -1,5 +1,6 @@
 #include "gfp.h"
-#include "algebra.h"
+#include "gfpm.h"
+#include "hqs.h"
 #include "csprng.h"
 
 #include <stdio.h>

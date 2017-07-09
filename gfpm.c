@@ -353,7 +353,7 @@ int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness )
 {
     gfpmatrix utm, ltm;
     unsigned int offset;
-    unsigned int i;
+    unsigned int i, j;
 
 #ifdef DEBUG
     if( mat.height != mat.width )
@@ -379,7 +379,16 @@ int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness )
     }
 
     /* multiply L * U to get the random invertible matrix */
-    gfpm_multiply(mat, ltm, utm);
+    gfpm_multiply(&ltm, ltm, utm);
+
+    /* copy over data */
+    for( i = 0 ; i < mat.height ; ++i )
+    {
+        for( j = 0 ; j < mat.width ; ++j )
+        {
+            gfp_copy(&mat.data[i*mat.width + j], ltm.data[i*mat.width + j]);
+        }
+    }
 
     gfpm_destroy(ltm);
     gfpm_destroy(utm);
@@ -437,17 +446,27 @@ int gfpm_transpose( gfpmatrix * trans )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
+int gfpm_multiply( gfpmatrix * dest, gfpmatrix left, gfpmatrix right )
 {
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
+    gfp_element * data;
 
     prod = gfp_init(1);
     sum = gfp_init(1);
     lsum = gfp_init(1);
 
+    data = malloc(sizeof(gfp_element) * dest->width * dest->height);
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            data[i*dest->width + j] = gfp_init(0);
+        }
+    }
+
     #ifdef DEBUG
-        if( dest.height != left.height || dest.width != right.width || left.width != right.height )
+        if( dest->height != left.height || dest->width != right.width || left.width != right.height )
         {
             printf("in gfpm_multiply: trying to multiply matrices with unmatched dimensions: %ix%i * %ix%i = %ix%i\n", left.height, left.width, right.height, right.width, dest.height, dest.width);
             return 0;
@@ -465,9 +484,19 @@ int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
                 gfp_multiply(&prod, left.data[i*left.width + k], right.data[k*right.width + j]);
                 gfp_add(&sum, lsum, prod);
             }
-            gfp_copy(&dest.data[i*dest.width + j], sum);
+            gfp_copy(&data[i*dest->width + j], sum);
         }
     }
+
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            gfp_destroy(dest->data[i*dest->width + j]);
+        }
+    }
+    free(dest->data);
+    dest->data = data;
 
     gfp_destroy(prod);
     gfp_destroy(sum);
@@ -496,22 +525,32 @@ int gfpm_multiply( gfpmatrix dest, gfpmatrix left, gfpmatrix right )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
+int gfpm_multiply_transpose( gfpmatrix * dest, gfpmatrix left, gfpmatrix rightT )
 {
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
+    gfp_element * data;
 
     prod = gfp_init(1);
     sum = gfp_init(1);
     lsum = gfp_init(1);
 
     #ifdef DEBUG
-        if( dest.height != left.height || dest.width != rightT.height || left.width != rightT.width )
+        if( dest->height != left.height || dest->width != rightT.height || left.width != rightT.width )
         {
             printf("in gfpm_multiply_transpose: trying to multiply matrices with unmatched dimensions: %ix%i * (%ix%i)^T = %ix%i\n", left.height, left.width, rightT.height, rightT.width, dest.height, dest.width);
             return 0;
         }
     #endif
+
+    data = malloc(sizeof(gfp_element) * dest->width * dest->height);
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            data[i*dest->width + j] = gfp_init(0);
+        }
+    }
 
     for( i = 0 ; i < left.height ; ++i )
     {
@@ -524,9 +563,19 @@ int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
                 gfp_multiply(&prod, left.data[i*left.width + k], rightT.data[j*rightT.width + k]);
                 gfp_add(&sum, lsum, prod);
             }
-            gfp_copy(&dest.data[i*dest.width + j], sum);
+            gfp_copy(&data[i*dest->width + j], sum);
         }
     }
+
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            gfp_destroy(dest->data[i*dest->width + j]);
+        }
+    }
+    free(dest->data);
+    dest->data = data;
 
     gfp_destroy(prod);
     gfp_destroy(sum);
@@ -555,10 +604,11 @@ int gfpm_multiply_transpose( gfpmatrix dest, gfpmatrix left, gfpmatrix rightT )
  * additions which is anyway the max. height and width of matrices
  * that can be stored in a  unsigned int.
  */
-int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
+int gfpm_transpose_multiply( gfpmatrix * dest, gfpmatrix leftT, gfpmatrix right )
 {
     unsigned  int i, j, k;
     gfp_element prod, sum, lsum;
+    gfp_element * data;
 
     prod = gfp_init(1);
     sum = gfp_init(1);
@@ -572,6 +622,15 @@ int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
         }
     #endif
 
+    data = malloc(sizeof(gfp_element)*dest->width*dest->height);
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            data[i*dest->width + j] = gfp_init(0);
+        }
+    }
+
     for( i = 0 ; i < leftT.width ; ++i )
     {
         for( j = 0 ; j < right.width ; ++j )
@@ -583,9 +642,19 @@ int gfpm_transpose_multiply( gfpmatrix dest, gfpmatrix leftT, gfpmatrix right )
                 gfp_multiply(&prod, leftT.data[k*leftT.width + i], right.data[k*right.width + j]);
                 gfp_add(&sum, lsum, prod);
             }
-            gfp_copy(&dest.data[i*dest.width + j], sum);
+            gfp_copy(&data[i*dest->width + j], sum);
         }
     }
+
+    for( i = 0 ; i < dest->height ; ++i )
+    {
+        for( j = 0 ; j < dest->width ; ++j )
+        {
+            gfp_destroy(dest->data[i*dest->width + j]);
+        }
+    }
+    free(dest->data);
+    dest->data = data;
 
     gfp_destroy(prod);
     gfp_destroy(sum);

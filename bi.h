@@ -1,10 +1,6 @@
 #ifndef BI_H
 #define BI_H
 
-#ifndef SEED_LENGTH
-#define SEED_LENGTH 64
-#endif
-
 typedef struct
 {
     char sign;
@@ -15,6 +11,7 @@ typedef struct
 bi bi_init( int number_of_limbs );
 bi bi_cast( long int integer );
 bi bi_cast_unsigned( unsigned long int integer );
+bi bi_cast_bytestring( int num_bytes, unsigned char * bytes );
 bi bi_local( char sign, int num_limbs, unsigned long int * limbs );
 bi bi_clone( bi source );
 int bi_destroy( bi integer );

@@ -95,6 +95,45 @@ bi bi_cast_unsigned( unsigned long int integer )
 
     return binteger;
 }
+bi bi_cast_bytestring( int num_bytes, unsigned char * bytes )
+{
+    bi binteger;
+    int remainder, full_limbs;
+    int i, j, l;
+
+    binteger.sign = 1;
+    binteger.num_limbs = (num_bytes + sizeof(unsigned long int) - 1) / sizeof(unsigned long int);
+    binteger.data = malloc(sizeof(unsigned long int) * binteger.num_limbs);
+    for( i = 0 ; i < binteger.num_limbs ; ++i )
+    {
+        binteger.data[i] = 0;
+    }
+
+    l = 0;
+    if( num_bytes % sizeof(unsigned long int) != 0 )
+    {
+        for( i = 0 ; i < num_bytes % sizeof(unsigned long int) ; ++i )
+        {
+            binteger.data[binteger.num_limbs-1] = binteger.data[binteger.num_limbs-1] << 8;
+            binteger.data[binteger.num_limbs-1] = binteger.data[binteger.num_limbs-1] | bytes[l++];
+        }
+        full_limbs = binteger.num_limbs - 1;
+    }
+    else
+    {
+        full_limbs = binteger.num_limbs;
+    }
+    for( i = full_limbs-1 ; i >= 0 ; --i )
+    {
+        for( j = 0 ; j < sizeof(unsigned long int) ; ++j )
+        {
+            binteger.data[i] = binteger.data[i] << 8;
+            binteger.data[i] = binteger.data[i] | bytes[l++];
+        }
+    }
+
+    return binteger;
+}
 
 /**
  * bi_local
@@ -1188,6 +1227,7 @@ int bi_shift_left( bi * dest, bi source, int shamt )
     num_limbs = (shamt + num_bits + sizeof(unsigned long int)*8 - 1) / (sizeof(unsigned long int)*8);
 
     dest->num_limbs = num_limbs;
+    
     data = malloc(sizeof(unsigned long int) * num_limbs);
     for( i = 0 ; i < dest->num_limbs ; ++i )
     {
@@ -1205,7 +1245,7 @@ int bi_shift_left( bi * dest, bi source, int shamt )
         }
     }
 
-    for( dest->num_limbs = dest->num_limbs ; dest->num_limbs > 0 ; --dest->num_limbs )
+    for( dest->num_limbs = dest->num_limbs ; dest->num_limbs > 1 ; --dest->num_limbs )
     {
         if( data[dest->num_limbs-1] != 0 )
         {
@@ -1216,6 +1256,7 @@ int bi_shift_left( bi * dest, bi source, int shamt )
 
     free(dest->data);
     dest->data = data;
+
 
     return 1;
 }

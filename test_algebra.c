@@ -75,9 +75,6 @@ int test_matrix_inverse( )
 {
     FILE * fh;
     csprng rng;
-    unsigned char buf1[10*10*sizeof(gfp_element)];
-    unsigned char buf2[10*10*sizeof(gfp_element)];
-    unsigned char buf3[10*10*sizeof(gfp_element)];
 
     unsigned char * randomness;
     char * prand;
@@ -91,9 +88,9 @@ int test_matrix_inverse( )
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)&random);
 
-    A = gfpm(10, 10, (gfp_element*)buf1);
-    B = gfpm(10,10, (gfp_element*)buf2);
-    C = gfpm(10,10, (gfp_element*)buf3);
+    A = gfpm_init(10,10);
+    B = gfpm_init(10,10);
+    C = gfpm_init(10,10);
 
 
     printf("testing matrix inverse ... ");
@@ -105,13 +102,16 @@ int test_matrix_inverse( )
 
     invertible = gfpm_inverse(B, A);
 
-    gfpm_multiply(C, A, B);
+    gfpm_multiply(&C, A, B);
 
     free(randomness);
 
     if( invertible == 0 || gfpm_is_eye(C) )
     {
         printf("success!\n");
+        gfpm_destroy(A);
+        gfpm_destroy(B);
+        gfpm_destroy(C);
         return 1;
     }
     else
@@ -124,6 +124,9 @@ int test_matrix_inverse( )
         printf("C:\n");
         gfpm_print(C);
         printf("random seed: %u\n", random);
+        gfpm_destroy(A);
+        gfpm_destroy(B);
+        gfpm_destroy(C);
         return 0;
     }
 }
@@ -159,9 +162,9 @@ int test_multiply_transpose( )
     gfpm_random(B, randomness);
     free(randomness);
 
-    gfpm_multiply_transpose(C1, A, B);
+    gfpm_multiply_transpose(&C1, A, B);
     gfpm_transpose(&B);
-    gfpm_multiply(C2, A, B);
+    gfpm_multiply(&C2, A, B);
     gfpm_transpose(&B);
 
     if( !gfpm_equals(C1, C2) )
@@ -182,9 +185,9 @@ int test_multiply_transpose( )
     C1 = gfpm_init(m, m);
     C2 = gfpm_init(m, m);
 
-    gfpm_transpose_multiply(C1, A, B);
+    gfpm_transpose_multiply(&C1, A, B);
     gfpm_transpose(&A);
-    gfpm_multiply(C2, A, B);
+    gfpm_multiply(&C2, A, B);
     gfpm_transpose(&A);
 
     if( !gfpm_equals(C1, C2) )
@@ -225,8 +228,8 @@ int test_solve( )
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
 
-    m = 10;
-    n = 11;
+    m = 20;
+    n = 21;
 
     printf("testing matrix equation solver ... ");
 
@@ -243,7 +246,7 @@ int test_solve( )
     csprng_generate(&rng, n*1*sizeof(unsigned long int)*num_limbs, randomness);
     gfpm_random(x, randomness);
     free(randomness);
-    gfpm_multiply(b, A, x);
+    gfpm_multiply(&b, A, x);
     gfpm_zeros(x);
 
 
@@ -261,7 +264,7 @@ int test_solve( )
         gfpm_random(v, randomness);
         free(randomness);
 
-        gfpm_multiply(k, K, v);
+        gfpm_multiply(&k, K, v);
 
         gfpm_destroy(v);
     }
@@ -273,7 +276,7 @@ int test_solve( )
 
     gfpm_add(x, s, k);
     b2 = gfpm_init(m,1);
-    gfpm_multiply(b2, A, x);
+    gfpm_multiply(&b2, A, x);
 
     if( !gfpm_equals(b, b2) )
     {
@@ -304,7 +307,7 @@ int test_solve( )
     gfpm_destroy(K);
     if( gfpm_solve(A, b, x, &K) && success == 1 )
     {
-        gfpm_multiply(b2, A, x);
+        gfpm_multiply(&b2, A, x);
         if( !gfpm_equals(b, b2) )
         {
             printf("fail!\n");
@@ -357,8 +360,8 @@ int test_composition( )
     printf("testing composition of linear transforms with homogeneous quadratic systems ... ");
 
 
-    m = 3;
-    n = 5;
+    m = 4;
+    n = 6;
 
     F = hqs_init(n, m);
     num_limbs = (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);
@@ -391,7 +394,6 @@ int test_composition( )
     FoSx = gfpm_init(m, 1);
     ToFoSx = gfpm_init(m, 1);
 
-
     equal = 1;
     for( i = 0 ; i < 1 && equal == 1 ; ++i )
     {
@@ -400,11 +402,11 @@ int test_composition( )
         gfpm_random(x, randomness);
         free(randomness);
 
-        gfpm_multiply(Sx, S, x);
+        gfpm_multiply(&Sx, S, x);
 
         hqs_eval(FoSx, F, Sx);
 
-        gfpm_multiply(ToFoSx, T, FoSx);
+        gfpm_multiply(&ToFoSx, T, FoSx);
 
         hqs_eval(y, P, x);
 

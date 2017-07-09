@@ -226,8 +226,8 @@ int hqs_compose_input( hqsystem F, gfpmatrix S )
     /* perform multiplication */
     for( i = 0 ; i < F.m ; ++i )
     {
-        gfpm_transpose_multiply(temp, S, F.quadratic_forms[i]);
-        gfpm_multiply(F.quadratic_forms[i], temp, S);
+        gfpm_transpose_multiply(&temp, S, F.quadratic_forms[i]);
+        gfpm_multiply(&F.quadratic_forms[i], temp, S);
     }
 
     /* destroy helper variables */
@@ -245,9 +245,6 @@ int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
 {
     unsigned int i, j, k;
     gfpmatrix vector, transposed_vector, temp, e;
-    gfp_element edata;
-
-    edata = gfp_init(1);
 
 #ifdef DEBUG
     if( y.height != sys.m || sys.n != x.height || y.width != x.width )
@@ -260,7 +257,7 @@ int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
     vector = gfpm_init(sys.n, 1);
     transposed_vector = gfpm(1, sys.n, vector.data);
     temp = gfpm_init(sys.n, 1);
-    e = gfpm(1, 1, &edata);
+    e = gfpm_init(1, 1);
 
     for( j = 0 ; j < x.width ; ++j )
     {
@@ -269,16 +266,16 @@ int hqs_eval( gfpmatrix y, hqsystem sys, gfpmatrix x )
         {
             for( k = 0 ; k < sys.m ; ++k )
             {
-                gfpm_multiply(temp, sys.quadratic_forms[k], vector);
-                gfpm_multiply(e, transposed_vector, temp);
+                gfpm_multiply(&temp, sys.quadratic_forms[k], vector);
+                gfpm_multiply(&e, transposed_vector, temp);
                 gfp_copy(&y.data[k*y.width + j], e.data[0]);
             }
         }
     }
 
+    gfpm_destroy(e);
     gfpm_destroy(vector);
     gfpm_destroy(temp);
-    gfp_destroy(edata);
 
     return 1;
 }

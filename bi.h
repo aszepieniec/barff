@@ -47,6 +47,9 @@ int bi_is_prime( bi integer, unsigned long int * random_ints, int certainty );
 int bi_print( bi integer );
 int bi_shift_left( bi * dest, bi src, int shamt );
 int bi_shift_right( bi * op, int shamt );
+unsigned char bi_getbyte( bi integer, int byte_index );
+int bi_serialize( unsigned char * bytes, bi integer );
+int bi_deserialize( bi * integer, unsigned char * bytes, int num_bytes );
 
 #endif
 

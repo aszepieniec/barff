@@ -574,6 +574,70 @@ int test_primality( unsigned int * random )
     return success;
 }
 
+int test_serialize( unsigned int * random )
+{
+    csprng rng;
+    int cmp, success;
+    int length, num_bytes, num_limbs;
+    bi a, A;
+    unsigned char * randomness;
+    unsigned char * bytes;
+
+    success = 1;
+    printf("testing serialization with randomness (%u) ", *random);
+
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char*)random);
+    csprng_generate(&rng, sizeof(unsigned int), (unsigned char*) random);
+
+    length = (csprng_generate_ulong(&rng) % 1000) + 1;
+    printf("and integer of %i bits ... ", length);
+    num_bytes = (length + 7) / 8;
+    num_limbs = (num_bytes + sizeof(unsigned long int) - 1)/sizeof(unsigned long int);
+
+    randomness = malloc(num_limbs * sizeof(unsigned long int));
+    csprng_generate(&rng, num_limbs*sizeof(unsigned long int), randomness);
+    A = bi_init(length);
+    bi_random(&A, length, randomness);
+    length = bi_bitsize(A);
+    num_bytes = (length + 7) / 8;
+    num_limbs = (num_bytes + sizeof(unsigned long int) - 1)/sizeof(unsigned long int);
+    if( csprng_generate_ulong(&rng) % 2 == 1 )
+    {
+        A.sign = -1;
+    }
+
+    bytes = malloc(num_bytes);
+    bi_serialize(bytes, A);
+
+    a = bi_init(0);
+    bi_deserialize(&a, bytes, num_bytes);
+    a.sign = A.sign;
+
+    cmp = bi_compare(A, a);
+
+    if( cmp != 0 )
+    {
+        success = 0;
+        printf("failure.\n");
+        printf("bitsize of A: %i\n", bi_bitsize(A));
+        printf("bitsize of a: %i\n", bi_bitsize(a));
+        printf("A: "); bi_print_bitstring(A); printf(" (%i limbs)\n", A.num_limbs);
+        printf("a: "); bi_print_bitstring(a); printf(" (%i limbs)\n", a.num_limbs);
+    }
+    else
+    {
+        printf("success.\n");
+    }
+
+    bi_destroy(A);
+    bi_destroy(a);
+    free(bytes);
+    free(randomness);
+
+    return success;
+}
+
 int main( int argc, char ** argv )
 {
 
@@ -594,6 +658,7 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_modexp(&random);
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_naf(&random);
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_primality(&random);
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_serialize(&random);
 
     if( b == 1 )
     {

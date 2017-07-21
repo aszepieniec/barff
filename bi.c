@@ -1944,3 +1944,116 @@ int bi_print_bitstring( bi integer )
     return 1;
 }
 
+/**
+ * bi_getbyte
+ * Get the ith least significant byte. (Indexation starts at zero.)
+ */
+unsigned char bi_getbyte( bi integer, int byte_index )
+{
+    int limb_index;
+    int remainder;
+
+    limb_index = byte_index / sizeof(unsigned long int);
+    remainder = byte_index % sizeof(unsigned long int);
+
+    if( limb_index >= integer.num_limbs || byte_index < 0 )
+    {
+        return 0;
+    }
+
+    return (unsigned char)((integer.data[limb_index] >> (8*remainder)) & 255);
+}
+
+/**
+ * bi_serialize
+ * Turn a big integer into a sequence of bytes, using the following
+ * format. Each block represents one byte. Size and sign data are
+ * not included.
+ *   0. [most significant byte]
+ *   1. [second most significant byte]
+ *   ...
+ *   number of bytes-1. [least significant byte]
+ */
+int bi_serialize( unsigned char * bytes, bi integer )
+{
+    int num_bits;
+    int num_bytes;
+    int j;
+    
+    num_bits = bi_bitsize(integer);
+    num_bytes = (num_bits + 7) / 8;
+    if( num_bytes == 0 )
+    {
+        num_bytes = 1;
+    }
+
+    for( j = 0 ; j < num_bytes ; ++j )
+    {
+        bytes[j] = bi_getbyte(integer, num_bytes-1-j);
+    }
+
+    return 1;
+}
+
+/**
+ * bi_deserialize
+ * Turn a sequence of bytes into a big integer. This function follows
+ * the same format as bi_serialize.
+ */
+int bi_deserialize( bi * integer, unsigned char * bytes, int num_bytes )
+{
+    int remainder;
+    int i, j, k;
+    unsigned long int L;
+    int total_num_limbs;
+    int num_full_limbs;
+
+    total_num_limbs = (num_bytes + sizeof(unsigned long int) - 1)/sizeof(unsigned long int);
+    num_full_limbs = num_bytes / sizeof(unsigned long int);
+
+    if( total_num_limbs > integer->num_limbs )
+    {
+        free(integer->data);
+        integer->num_limbs = total_num_limbs;
+        integer->data = malloc(integer->num_limbs * sizeof(unsigned long int));
+    }
+    else
+    {
+        for( i = total_num_limbs ; i < integer->num_limbs ; ++i )
+        {
+            integer->data[i] = 0;
+        }
+        integer->num_limbs = total_num_limbs;
+    }
+
+    remainder = num_bytes % sizeof(unsigned long int);
+    if( remainder != 0 )
+    {
+        L = 0;
+        for( i = 0; i < remainder ; ++i )
+        {
+            L = L << 8;
+            L = L | bytes[i];
+        }
+        integer->data[integer->num_limbs-1] = L;
+    }
+    else
+    {
+        i = 0;
+    }
+
+    for( j = 0 ; j < num_full_limbs ; ++j )
+    {
+        L = 0;
+        for( k = 0 ; k < sizeof(unsigned long int) ; ++k )
+        {
+            L = L << 8;
+            L = L | bytes[i++];
+        }
+        integer->data[num_full_limbs-1 - j] = L;
+    }
+
+    return 1;
+}
+
+

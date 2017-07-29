@@ -971,6 +971,7 @@ int bi_divide( bi * quo, bi * rem, bi numerator, bi denominator )
         bi_shift_right(&shifted, 1);
     }
 
+    free(rem->data);
     rem->data = remainder.data;
     rem->num_limbs = remainder.num_limbs;
     rem->sign = 1;
@@ -1725,6 +1726,7 @@ int bi_miller_rabin_trial( bi integer, bi base )
         bi_destroy(d);
         bi_destroy(one);
         bi_destroy(two);
+        bi_destroy(temp);
         return 1;
     }
 
@@ -1735,6 +1737,7 @@ int bi_miller_rabin_trial( bi integer, bi base )
         bi_destroy(d);
         bi_destroy(one);
         bi_destroy(two);
+        bi_destroy(temp);
         return 1;
     }
 
@@ -1749,6 +1752,7 @@ int bi_miller_rabin_trial( bi integer, bi base )
             bi_destroy(d);
             bi_destroy(one);
             bi_destroy(two);
+            bi_destroy(temp);
             return 0;
         }
         if( bi_compare(x, nm1) == 0 )

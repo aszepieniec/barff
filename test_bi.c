@@ -525,6 +525,7 @@ int test_primality( unsigned int * random )
         bi_destroy(p);
         bi_destroy(b);
         bi_destroy(a);
+        free(random_ints);
         return 0;
     }
 
@@ -551,7 +552,6 @@ int test_primality( unsigned int * random )
         bi_negate(&b);
     }
 
-    random_ints = malloc(sizeof(unsigned long int) * 20);
     bi_multiply(&p, a, b);
     csprng_generate(&rng, 20 * sizeof(unsigned long int), (unsigned char *)random_ints);
     if( bi_is_prime(p, random_ints, 20) == 1 )

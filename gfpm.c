@@ -44,7 +44,8 @@ int xgcd( int a, int b, int* x, int* y, int* gcd )
 
 /**
  * gfpm
- * Create gfpmatrix object with given buffer.
+ * Create gfpmatrix object with given buffer. Usefule for reusing
+ * the same data line.
  */
 gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element* pdata )
 {
@@ -53,13 +54,6 @@ gfpmatrix gfpm( unsigned  int height, unsigned  int width, gfp_element* pdata )
     mat.height = height;
     mat.width = width;
     mat.data = pdata;
-    for( i = 0 ; i < height ; ++i )
-    {
-        for( j = 0 ; j < width ; ++j )
-        {
-            mat.data[i*width + j] = gfp_init(0);
-        }
-    }
     return mat;
 }
 

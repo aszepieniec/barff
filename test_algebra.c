@@ -146,8 +146,8 @@ int test_multiply_transpose( )
 
     printf("testing transpose-multiplication ... ");
 
-    m = 15;
-    n = 10;
+    m = 10;
+    n = 5;
 
     A = gfpm_init(n, m);
     B = gfpm_init(n, m);
@@ -228,8 +228,8 @@ int test_solve( )
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
 
-    m = 20;
-    n = 21;
+    m = 5;
+    n = 6;
 
     printf("testing matrix equation solver ... ");
 
@@ -360,8 +360,8 @@ int test_composition( )
     printf("testing composition of linear transforms with homogeneous quadratic systems ... ");
 
 
-    m = 4;
-    n = 6;
+    m = 3;
+    n = 4;
 
     F = hqs_init(n, m);
     num_limbs = (GFP_NUMBITS + sizeof(unsigned long int) * 8 - 1) / (sizeof(unsigned long int) * 8);

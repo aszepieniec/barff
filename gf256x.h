@@ -1,0 +1,31 @@
+#ifndef GF256X_H
+#define GF256X_H
+
+extern unsigned char gf256_dlogs[256];
+extern unsigned char gf256_antilogs[256];
+
+unsigned char gf256_multiply( unsigned char lhs, unsigned char rhs );
+unsigned char gf256_inverse( unsigned char elm );
+
+typedef struct
+{
+    unsigned char * data;
+    int degree;
+} gf256x;
+
+gf256x gf256x_init( int deg );
+int gf256x_copy( gf256x* dest, gf256x source );
+int gf256x_destroy( gf256x p );
+int gf256x_x( gf256x* p );
+
+unsigned char gf256x_lc( gf256x p );
+int gf256x_add( gf256x* dest, gf256x lhs, gf256x rhs );
+int gf256x_multiply( gf256x* dest, gf256x lhs, gf256x rhs );
+int gf256x_multiply_constant_shift( gf256x* dest, gf256x poly, unsigned char constant, int shift );
+int gf256x_divide( gf256x* quo, gf256x* rem, gf256x num, gf256x den );
+int gf256x_xgcd( gf256x* a, gf256x* b, gf256x* g, gf256x x, gf256x y );
+
+int gf256x_print( gf256x p );
+
+#endif
+

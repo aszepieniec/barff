@@ -2,6 +2,7 @@
 #include "gfpm.h"
 #include "hqs.h"
 #include "csprng.h"
+#include "gf256x.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -436,6 +437,270 @@ int test_composition( )
     }
 }
 
+int test_gf256x_add( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf256x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing addition of GF(256)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf256x_init(m);
+    csprng_generate(&rng, a.degree+1, a.data);
+
+    b = gf256x_init(n);
+    csprng_generate(&rng, b.degree+1, b.data);
+
+    c = gf256x_init(o);
+    csprng_generate(&rng, c.degree+1, c.data);
+
+    ab = gf256x_init(0);
+    gf256x_add(&ab, a, b);
+    abc1 = gf256x_init(0);
+    gf256x_add(&abc1, ab, c);
+
+    bc = gf256x_init(0);
+    gf256x_add(&bc, b, c);
+    abc2 = gf256x_init(0);
+    gf256x_add(&abc2, ab, c);
+
+    equals = gf256x_equals(abc1, abc2);
+
+    gf256x_destroy(a);
+    gf256x_destroy(b);
+    gf256x_destroy(c);
+    gf256x_destroy(ab);
+    gf256x_destroy(abc1);
+    gf256x_destroy(bc);
+    gf256x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf256x_multiply( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf256x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing multiplication of GF(256)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf256x_init(m);
+    csprng_generate(&rng, a.degree+1, a.data);
+
+    b = gf256x_init(n);
+    csprng_generate(&rng, b.degree+1, b.data);
+
+    c = gf256x_init(o);
+    csprng_generate(&rng, c.degree+1, c.data);
+
+    ab = gf256x_init(0);
+    gf256x_multiply(&ab, a, b);
+    abc1 = gf256x_init(0);
+    gf256x_multiply(&abc1, ab, c);
+
+    bc = gf256x_init(0);
+    gf256x_multiply(&bc, b, c);
+    abc2 = gf256x_init(0);
+    gf256x_multiply(&abc2, ab, c);
+
+    equals = gf256x_equals(abc1, abc2);
+    equals &= (a.degree + b.degree + c.degree) == abc1.degree;
+
+    gf256x_destroy(a);
+    gf256x_destroy(b);
+    gf256x_destroy(c);
+    gf256x_destroy(ab);
+    gf256x_destroy(abc1);
+    gf256x_destroy(bc);
+    gf256x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf256x_divide( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf256x numerator, divisor, quotient, remainder, product, sum;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % m;
+
+    printf("testing division of GF(256)[x] elements of degrees %i, and %i... ", m, n);
+
+    numerator = gf256x_init(m);
+    csprng_generate(&rng, numerator.degree+1, numerator.data);
+
+    divisor = gf256x_init(n);
+    csprng_generate(&rng, divisor.degree+1, divisor.data);
+
+    quotient = gf256x_init(0);
+    remainder = gf256x_init(0);
+    gf256x_divide(&quotient, &remainder, numerator, divisor);
+
+    product = gf256x_init(0);
+    gf256x_multiply(&product, divisor, quotient);
+
+    sum = gf256x_init(0);
+    gf256x_add(&sum, product, remainder);
+
+    equals = gf256x_equals(numerator, sum);
+    equals &= remainder.degree <= divisor.degree; /* includes division by constant */
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("\n");
+        printf("numerator: "); gf256x_print(numerator); printf("\n");
+        printf("divisor: "); gf256x_print(divisor); printf("\n");
+        printf("quotient: "); gf256x_print(quotient); printf("\n");
+        printf("remainder: "); gf256x_print(remainder); printf("\n");
+        printf("product: "); gf256x_print(product); printf("\n");
+        printf("sum: "); gf256x_print(sum); printf("\n");
+        printf("fail!\n");
+    }
+
+    gf256x_destroy(numerator);
+    gf256x_destroy(divisor);
+    gf256x_destroy(remainder);
+    gf256x_destroy(quotient);
+    gf256x_destroy(product);
+    gf256x_destroy(sum);
+
+    return equals;
+}
+
+int test_gf256x_xgcd( )
+{
+    unsigned short int m, n;
+    unsigned int i;
+    int equal;
+    gf256x x, y, a, b, g, ax, by, sum, quotient, remainder;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % 200;
+
+    printf("testing xgcd GF(256)[x] elements of degrees %i, and %i... ", m, n);
+
+    x = gf256x_init(m);
+    csprng_generate(&rng, x.degree+1, x.data);
+
+    y = gf256x_init(n);
+    csprng_generate(&rng, y.degree+1, y.data);
+
+    quotient = gf256x_init(0);
+    remainder = gf256x_init(0);
+    a = gf256x_init(0);
+    b = gf256x_init(0);
+    g = gf256x_init(0);
+    gf256x_xgcd(&a, &b, &g, x, y);
+
+    ax = gf256x_init(0);
+    by = gf256x_init(0);
+    sum = gf256x_init(0);
+    gf256x_multiply(&ax, a, x);
+    gf256x_multiply(&by, b, y);
+    gf256x_add(&sum, ax, by);
+    equals = gf256x_equals(g, sum);
+
+    gf256x_divide(&quotient, &remainder, x, g);
+    equals &= gf256x_is_zero(remainder);
+
+    gf256x_divide(&quotient, &remainder, y, g);
+    equals &= gf256x_is_zero(remainder);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+    }
+
+    gf256x_destroy(x);
+    gf256x_destroy(y);
+    gf256x_destroy(a);
+    gf256x_destroy(b);
+    gf256x_destroy(g);
+    gf256x_destroy(ax);
+    gf256x_destroy(by);
+    gf256x_destroy(sum);
+    gf256x_destroy(remainder);
+    gf256x_destroy(quotient);
+
+    return equals;
+}
+
 int main( int argc, char ** argv )
 {
     unsigned int i;
@@ -456,6 +721,10 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_solve();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_xgcd();
 
 #ifdef BIG
     bi_destroy(ninetythree);

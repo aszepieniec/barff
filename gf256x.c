@@ -114,6 +114,17 @@ unsigned char gf256_inverse( unsigned char elm )
 }
 
 /**
+ * gf256_exp
+ * Raise a given GF(256) element to the given power.
+ */
+unsigned char gf256_exp( unsigned char element, int exponent )
+{
+    int index;
+    index = (255 + ((gf256_dlogs[element] * exponent) % 255)) % 255;
+    return gf256_antilogs[index];
+}
+
+/**
  * gf256x_init
  * Initialize a GF(256)[x] object of given degree. Allocate memory
  * and set to zero.
@@ -487,6 +498,28 @@ int gf256x_xgcd( gf256x* a, gf256x* b, gf256x* g, gf256x x, gf256x y )
 }
 
 /**
+ * gf256x_eval
+ * Evaluate the given polynomial in a given point.
+ */
+unsigned char gf256x_eval( gf256x polynomial, unsigned char point )
+{
+    int i;
+    unsigned char acc;
+    unsigned char xi;
+    acc = 0;
+    xi = 1;
+    for( i = 0 ; i <= polynomial.degree ; ++i )
+    {
+        acc = acc ^ gf256_multiply(polynomial.data[i], xi);
+        xi = gf256_multiply(xi, point);
+    }
+
+//    printf("evaluating polynomial "); gf256x_print(polynomial); printf(" int point %02x; result: %02x\n", point, acc);
+
+    return acc;
+}
+
+/**
  * gf256x_print
  * Cast the polynomial's coefficients to hex number and throw them to
  * stdout.
@@ -495,7 +528,7 @@ int gf256x_print( gf256x p )
 {
     int i;
 
-    for( i = p.degree ; i >= 0 ; --i )
+    for( i = 0 ; i <= p.degree ; ++i )
     {
         printf("%02x", p.data[i]);
     }

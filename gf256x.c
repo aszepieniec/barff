@@ -444,6 +444,7 @@ int gf256x_xgcd( gf256x* a, gf256x* b, gf256x* g, gf256x x, gf256x y )
     gf256x r, old_r;
     gf256x quotient, remainder;
     gf256x temp;
+    unsigned char lc;
 
     s = gf256x_init(0);
     old_s = gf256x_init(0);
@@ -480,9 +481,11 @@ int gf256x_xgcd( gf256x* a, gf256x* b, gf256x* g, gf256x x, gf256x y )
         gf256x_copy(&t, temp);
     }
 
-    gf256x_copy(a, old_s);
-    gf256x_copy(b, old_t);
-    gf256x_copy(g, old_r);
+    lc = old_r.data[old_r.degree];
+    lc = gf256_inverse(lc);
+    gf256x_multiply_constant_shift(a, old_s, lc, 0);
+    gf256x_multiply_constant_shift(b, old_t, lc, 0);
+    gf256x_multiply_constant_shift(g, old_r, lc, 0);
 
     gf256x_destroy(s);
     gf256x_destroy(old_s);

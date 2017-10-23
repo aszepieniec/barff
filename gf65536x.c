@@ -585,10 +585,12 @@ unsigned int gf65536x_eval( gf65536x polynomial, unsigned int point )
     int i;
     unsigned int acc;
     unsigned int xi;
+    unsigned int coeff;
     acc = 0;
     xi = 1;
     for( i = 0 ; i < 1 + polynomial.degree ; ++i )
     {
+        coeff = polynomial.data[2*i] | (polynomial.data[2*i] << 8);
         acc = acc ^ gf65536_multiply(polynomial.data[i], xi);
         xi = gf65536_multiply(xi, point);
     }

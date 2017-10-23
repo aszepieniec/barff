@@ -4,6 +4,7 @@
 #include "csprng.h"
 #include "gf256x.h"
 #include "gf65536x.h"
+#include "gf16777216x.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1045,6 +1046,352 @@ int test_gf65536x_xgcd( )
     return equals;
 }
 
+
+int test_gf16777216_inverse( )
+{
+    csprng rng;
+    unsigned int random;
+    int equals;
+    unsigned int a, b, c;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    printf("testing inverse computation of GF(16777216) elements ... ");
+
+    a = csprng_generate_ulong(&rng) % 0xffffff;
+
+    b = gf16777216_inverse(a);
+
+    c = gf16777216_multiply(a, b);
+
+    if( c == 1 || a == 0 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("a: %02x%02x%02x\n", a&0xff, (a>>8)&0xff, (a>>16)&0xff);
+        printf("b: %02x%02x%02x\n", b&0xff, (b>>8)&0xff, (b>>16)&0xff);
+        printf("c: %02x%02x%02x\n", c&0xff, (c>>8)&0xff, (c>>16)&0xff);
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf16777216x_add( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf16777216x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing addition of GF(16777216)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf16777216x_init(m);
+    csprng_generate(&rng, 3*a.degree+3, a.data);
+
+    b = gf16777216x_init(n);
+    csprng_generate(&rng, 3*b.degree+3, b.data);
+
+    c = gf16777216x_init(o);
+    csprng_generate(&rng, 3*c.degree+3, c.data);
+
+    ab = gf16777216x_init(0);
+    gf16777216x_add(&ab, a, b);
+    abc1 = gf16777216x_init(0);
+    gf16777216x_add(&abc1, ab, c);
+
+    bc = gf16777216x_init(0);
+    gf16777216x_add(&bc, b, c);
+    abc2 = gf16777216x_init(0);
+    gf16777216x_add(&abc2, ab, c);
+
+    equals = gf16777216x_equals(abc1, abc2);
+
+    gf16777216x_destroy(a);
+    gf16777216x_destroy(b);
+    gf16777216x_destroy(c);
+    gf16777216x_destroy(ab);
+    gf16777216x_destroy(abc1);
+    gf16777216x_destroy(bc);
+    gf16777216x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf16777216x_multiply( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf16777216x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing multiplication of GF(16777216)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf16777216x_init(m);
+    csprng_generate(&rng, 3*a.degree+3, a.data);
+
+    b = gf16777216x_init(n);
+    csprng_generate(&rng, 3*b.degree+3, b.data);
+
+    c = gf16777216x_init(o);
+    csprng_generate(&rng, 3*c.degree+3, c.data);
+
+    ab = gf16777216x_init(0);
+    gf16777216x_multiply(&ab, a, b);
+    abc1 = gf16777216x_init(0);
+    gf16777216x_multiply(&abc1, ab, c);
+
+    bc = gf16777216x_init(0);
+    gf16777216x_multiply(&bc, b, c);
+    abc2 = gf16777216x_init(0);
+    gf16777216x_multiply(&abc2, ab, c);
+
+    equals = gf16777216x_equals(abc1, abc2);
+    equals &= (a.degree + b.degree + c.degree) == abc1.degree;
+
+    gf16777216x_destroy(a);
+    gf16777216x_destroy(b);
+    gf16777216x_destroy(c);
+    gf16777216x_destroy(ab);
+    gf16777216x_destroy(abc1);
+    gf16777216x_destroy(bc);
+    gf16777216x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf16777216x_divide( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf16777216x numerator, divisor, quotient, remainder, product, sum;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % m;
+
+    printf("testing division of GF(16777216)[x] elements of degrees %i, and %i... ", m, n);
+
+    numerator = gf16777216x_init(m);
+    csprng_generate(&rng, 3*numerator.degree+3, numerator.data);
+
+    divisor = gf16777216x_init(n);
+    csprng_generate(&rng, 3*divisor.degree+3, divisor.data);
+
+    quotient = gf16777216x_init(0);
+    remainder = gf16777216x_init(0);
+    gf16777216x_divide(&quotient, &remainder, numerator, divisor);
+
+    product = gf16777216x_init(0);
+    gf16777216x_multiply(&product, divisor, quotient);
+
+    sum = gf16777216x_init(0);
+    gf16777216x_add(&sum, product, remainder);
+
+    equals = gf16777216x_equals(numerator, sum);
+    equals &= remainder.degree <= divisor.degree; /* includes division by constant */
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("\n");
+        printf("numerator: "); gf16777216x_print(numerator); printf("\n");
+        printf("divisor: "); gf16777216x_print(divisor); printf("\n");
+        printf("quotient: "); gf16777216x_print(quotient); printf("\n");
+        printf("remainder: "); gf16777216x_print(remainder); printf("\n");
+        printf("product: "); gf16777216x_print(product); printf("\n");
+        printf("sum: "); gf16777216x_print(sum); printf("\n");
+        gf16777216x_add(&sum, sum, numerator);
+        printf("difference: "); gf16777216x_print(sum); printf("\n");
+        printf("fail!\n");
+    }
+
+    gf16777216x_destroy(numerator);
+    gf16777216x_destroy(divisor);
+    gf16777216x_destroy(remainder);
+    gf16777216x_destroy(quotient);
+    gf16777216x_destroy(product);
+    gf16777216x_destroy(sum);
+
+    return equals;
+}
+
+int test_gf16777216x_xgcd( )
+{
+    unsigned short int m, n;
+    unsigned int i;
+    int equal;
+    gf16777216x x, y, a, b, g, ax, by, sum, quotient, remainder;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % 200;
+
+    printf("randomness: %lu ...", random);
+
+    printf("testing xgcd GF(16777216)[x] elements of degrees %i, and %i... ", m, n);
+
+    x = gf16777216x_init(m);
+    csprng_generate(&rng, 3*x.degree+3, x.data);
+
+    y = gf16777216x_init(n);
+    csprng_generate(&rng, 3*y.degree+3, y.data);
+
+    quotient = gf16777216x_init(0);
+    remainder = gf16777216x_init(0);
+    a = gf16777216x_init(0);
+    b = gf16777216x_init(0);
+    g = gf16777216x_init(0);
+    gf16777216x_xgcd(&a, &b, &g, x, y);
+
+    ax = gf16777216x_init(0);
+    by = gf16777216x_init(0);
+    sum = gf16777216x_init(0);
+    gf16777216x_multiply(&ax, a, x);
+    gf16777216x_multiply(&by, b, y);
+    gf16777216x_add(&sum, ax, by);
+    equals = gf16777216x_equals(g, sum);
+
+    gf16777216x_divide(&quotient, &remainder, x, g);
+    equals &= gf16777216x_is_zero(remainder);
+
+    gf16777216x_divide(&quotient, &remainder, y, g);
+    equals &= gf16777216x_is_zero(remainder);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+        printf("x: "); gf16777216x_print(x); printf("\n");
+        printf("y: "); gf16777216x_print(y); printf("\n");
+        printf("a: "); gf16777216x_print(a); printf("\n");
+        printf("b: "); gf16777216x_print(b); printf("\n");
+        printf("g: "); gf16777216x_print(g); printf("\n");
+
+    gf16777216x_multiply(&ax, a, x);
+    gf16777216x_multiply(&by, b, y);
+    gf16777216x_add(&sum, ax, by);
+
+        if( gf16777216x_equals(g, sum) == 1 )
+        {
+            printf("sum equals\n");
+        }
+        else
+        {
+            printf("sum is different\n");
+            printf("ax: "); gf16777216x_print(ax); printf("\n");
+            printf("by: "); gf16777216x_print(by); printf("\n");
+            printf("sum: "); gf16777216x_print(sum); printf("\n");
+            printf("g = "); gf16777216x_print(g); printf("\n");
+        }
+
+    gf16777216x_divide(&quotient, &remainder, x, g);
+        if( gf16777216x_is_zero(remainder) == 1 )
+        {
+            printf("x is zero mod g\n");
+        }
+        else
+        {
+            printf("x is nonzero mod g\n");
+        }
+
+    gf16777216x_divide(&quotient, &remainder, y, g);
+        if( gf16777216x_is_zero(remainder) == 1 )
+        {
+            printf("y is zero mod g\n");
+        }
+        else
+        {
+            printf("y is nonzero mod g\n");
+        }
+    }
+
+    gf16777216x_destroy(x);
+    gf16777216x_destroy(y);
+    gf16777216x_destroy(a);
+    gf16777216x_destroy(b);
+    gf16777216x_destroy(g);
+    gf16777216x_destroy(ax);
+    gf16777216x_destroy(by);
+    gf16777216x_destroy(sum);
+    gf16777216x_destroy(remainder);
+    gf16777216x_destroy(quotient);
+
+    return equals;
+}
+
 int main( int argc, char ** argv )
 {
     unsigned int i;
@@ -1073,7 +1420,12 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_add();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_multiply();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_divide();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf65536x_xgcd();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_xgcd();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216_inverse();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_add();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
 
 #ifdef BIG
     bi_destroy(ninetythree);

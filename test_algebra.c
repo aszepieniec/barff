@@ -1392,6 +1392,67 @@ int test_gf16777216x_xgcd( )
     return equals;
 }
 
+int test_gf16777216x_modexp( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf16777216x g, p, ga, gb;
+    csprng rng;
+    unsigned long int a, b;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 100);
+    n = csprng_generate_ulong(&rng) % m;
+
+    printf("testing modexp of GF(16777216)[x] elements for modulus degree %i ... ", m);
+
+    p = gf16777216x_init(m);
+    csprng_generate(&rng, 3*p.degree+3, p.data);
+
+    g = gf16777216x_init(n);
+    csprng_generate(&rng, 3*g.degree+3, g.data);
+
+    ga = gf16777216x_init(0);
+    gb = gf16777216x_init(0);
+
+    a = csprng_generate_ulong(&rng) % (1 << (sizeof(unsigned long int)*3-1));
+    b = csprng_generate_ulong(&rng) % (1 << (sizeof(unsigned long int)*3-1));
+
+    gf16777216x_modexp(&ga, g, a, p);
+    gf16777216x_modexp(&ga, ga, b, p);
+
+    gf16777216x_modexp(&gb, g, a*b, p);
+
+    equals = gf16777216x_equals(ga, gb);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+        printf("ga: "); gf16777216x_print(ga); printf("\n");
+        printf("gb: "); gf16777216x_print(gb); printf("\n");
+    }
+
+    gf16777216x_destroy(g);
+    gf16777216x_destroy(p);
+    gf16777216x_destroy(ga);
+    gf16777216x_destroy(gb);
+
+    return equals;
+}
+
+
 int main( int argc, char ** argv )
 {
     unsigned int i;
@@ -1424,8 +1485,9 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216_inverse();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_add();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_multiply();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
 
 #ifdef BIG
     bi_destroy(ninetythree);

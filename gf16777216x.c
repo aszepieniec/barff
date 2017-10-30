@@ -588,6 +588,40 @@ int gf16777216x_xgcd( gf16777216x* a, gf16777216x* b, gf16777216x* g, gf16777216
 }
 
 /**
+ * gf16777216x_modexp
+ * Raise a given polynomial to a given power modulo another
+ * polynomial.
+ */
+int gf16777216x_modexp( gf16777216x* dest, gf16777216x base, unsigned long int exponent, gf16777216x modulus )
+{
+    gf16777216x raised, quo;
+    int i;
+
+    raised = gf16777216x_init(0);
+    quo = gf16777216x_init(0);
+    raised.data[0] = 1;
+    raised.data[1] = 0;
+    raised.data[2] = 0;
+
+    for( i = sizeof(unsigned long int) * 8 - 1 ; i >= 0 ; --i )
+    {
+        gf16777216x_multiply(&raised, raised, raised);
+        if( (exponent >> i) & 1 != 0 )
+        {
+            gf16777216x_multiply(&raised, raised, base);
+        }
+        gf16777216x_divide(&quo, &raised, raised, modulus);
+    }
+
+    gf16777216x_destroy(quo);
+    gf16777216x_destroy(*dest);
+    dest->degree = raised.degree;
+    dest->data = raised.data;
+
+    return 1;
+}
+
+/**
  * gf16777216x_eval
  * Evaluate the given polynomial in a given point.
  */

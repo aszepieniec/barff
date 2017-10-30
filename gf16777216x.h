@@ -21,6 +21,10 @@ int gf16777216x_multiply( gf16777216x* dest, gf16777216x lhs, gf16777216x rhs );
 int gf16777216x_multiply_constant_shift( gf16777216x* dest, gf16777216x poly, unsigned int constant, int shift );
 int gf16777216x_divide( gf16777216x* quo, gf16777216x* rem, gf16777216x num, gf16777216x den );
 int gf16777216x_xgcd( gf16777216x* a, gf16777216x* b, gf16777216x* g, gf16777216x x, gf16777216x y );
+int gf16777216x_modexp( gf16777216x* dest, gf16777216x base, unsigned long int exponent, gf16777216x modulus );
+
+int gf16777216x_equals( gf16777216x lhs, gf16777216x rhs );
+int gf16777216x_is_zero( gf16777216x lhs );
 
 int gf16777216x_print( gf16777216x p );
 

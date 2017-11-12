@@ -10,7 +10,14 @@
 gf2x gf2x_init( int deg )
 {
     gf2x elm;
-    elm.data = malloc((deg+1+7)/8);
+    int num_bytes;
+
+    num_bytes = 1;
+    if( (deg+1+7)/8 > num_bytes )
+    {
+        num_bytes = (deg+1+7)/8;
+    }
+    elm.data = malloc(num_bytes);
     elm.degree = deg;
     return elm;
 }
@@ -22,7 +29,7 @@ gf2x gf2x_init( int deg )
 int gf2x_zero( gf2x* p )
 {
     free(p->data);
-    p->degree = 0;
+    p->degree = -1;
     p->data = malloc(1);
     p->data[0] = 0;
     return 1;
@@ -49,16 +56,17 @@ int gf2x_one( gf2x* p )
 int gf2x_copy( gf2x* dest, gf2x source )
 {
     int i;
-    if( dest->degree != source.degree )
-    {
-        free(dest->data);
-        dest->data = malloc((source.degree+1+7)/8);
-        dest->degree = source.degree;
-    }
+    gf2x temp;
+
+    temp = gf2x_init(source.degree);
+
     for( i = 0 ; i < (source.degree+1+7)/8 ; ++i )
     {
-        dest->data[i] = source.data[i];
+        temp.data[i] = source.data[i];
     }
+
+    gf2x_destroy(*dest);
+    *dest = temp;
     return 1;
 }
 
@@ -73,7 +81,7 @@ int gf2x_destroy( gf2x p )
 
 /**
  * gf2x_add
- * Add two GF(256)[x] elements together.
+ * Add two GF(2)[x] elements together.
  */
 int gf2x_add( gf2x* dest, gf2x lhs, gf2x rhs )
 {
@@ -83,6 +91,12 @@ int gf2x_add( gf2x* dest, gf2x lhs, gf2x rhs )
     if( rhs.degree < 0 )
     {
         gf2x_copy(dest, lhs);
+        return 1;
+    }
+
+    if( lhs.degree < 0 )
+    {
+        gf2x_copy(dest, rhs);
         return 1;
     }
 
@@ -131,6 +145,12 @@ int gf2x_multiply( gf2x* dest, gf2x lhs, gf2x rhs )
     int degree;
     unsigned char * data;
     gf2x temp, shifted;
+
+    if( gf2x_is_zero(rhs) == 1 || gf2x_is_zero(lhs) == 1 )
+    {
+        gf2x_zero(dest);
+        return 1;
+    }
 
     degree = lhs.degree + rhs.degree;
     temp = gf2x_init(0);
@@ -202,6 +222,24 @@ int gf2x_is_zero( gf2x p )
 }
 
 /**
+ * gf2x_is_one
+ * Determine if the given polynomial is equal to one. Return one if
+ * so, zero otherwise.
+ */
+int gf2x_is_one( gf2x p )
+{
+    int one;
+    int i;
+    one = 1;
+    for( i = 1 ; i < (p.degree+1+7)/8 ; ++i )
+    {
+        one &= (p.data[i] == 0);
+    }
+    one &= (p.data[0] == 1);
+    return one;
+}
+
+/**
  * gf2x_shift_left
  * Apply a shift it to the polynomial (to the left,
  * i.e., towards higher degree). Satisfies:
@@ -266,12 +304,13 @@ int gf2x_trim( gf2x* poly )
     int i;
 
     /* first, find out if we really have to do something at all */
-    if( poly->degree == 0 || (poly->data[poly->degree/8] & (1 << (poly->degree % 8))) != 0 )
+    if( poly->degree < 0 || (poly->data[poly->degree/8] & (1 << (poly->degree % 8))) != 0 )
     {
         return 1;
     }
     else
     {
+        //printf("trimming "); gf2x_print(*poly); printf("\n");
     }
 
     for( i = poly->degree % 8 ; i >= 0 ; --i )
@@ -411,7 +450,6 @@ int gf2x_xgcd( gf2x* a, gf2x* b, gf2x* g, gf2x x, gf2x y )
     gf2x r, old_r;
     gf2x quotient, remainder;
     gf2x temp;
-    unsigned char lc;
 
     s = gf2x_init(0);
     old_s = gf2x_init(0);
@@ -423,6 +461,7 @@ int gf2x_xgcd( gf2x* a, gf2x* b, gf2x* g, gf2x x, gf2x y )
     remainder = gf2x_init(0);
     temp = gf2x_init(0);
 
+    gf2x_zero(&temp);
     gf2x_zero(&s);
     gf2x_one(&old_s);
     gf2x_one(&t);
@@ -462,6 +501,122 @@ int gf2x_xgcd( gf2x* a, gf2x* b, gf2x* g, gf2x x, gf2x y )
     gf2x_destroy(remainder);
     gf2x_destroy(temp);
 
+    return 1;
+}
+
+/**
+ * gf2x_gcd
+ * Get the greatest common divisor but we don't care about the Bezout
+ * coefficients.
+ */
+int gf2x_gcd( gf2x* g, gf2x x, gf2x y)
+{
+    gf2x a, b;
+    a = gf2x_init(0);
+    b = gf2x_init(0);
+    gf2x_xgcd(&a, &b, g, x, y);
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+    return 1;
+}
+
+
+/**
+ * gf2x_lcm
+ * Get the least common multiple of the two given polynomials.
+ */
+int gf2x_lcm( gf2x* l, gf2x x, gf2x y)
+{
+    gf2x g;
+    g = gf2x_init(0);
+    gf2x_gcd(&g, x, y);
+    gf2x_multiply(l, x, y);
+    gf2x_divide(l, &g, *l, g);
+    gf2x_destroy(g);
+    return 1;
+}
+
+/**
+ * gf2x_mod
+ * Compute the remainder of the given polynomial after division by
+ * modulus.
+ */
+int gf2x_mod( gf2x* res, gf2x poly, gf2x modulus )
+{
+    gf2x quotient;
+    quotient = gf2x_init(0);
+    gf2x_divide(&quotient, res, poly, modulus);
+    gf2x_destroy(quotient);
+    return 1;
+}
+
+/**
+ * gf2x_modinv
+ * Compute the modular inverse of the given polynomial (base) modulo
+ * the modulus.
+ */
+int gf2x_modinv( gf2x * inv, gf2x base, gf2x modulus )
+{
+    int success;
+    gf2x g, a, b;
+    g = gf2x_init(0);
+    a = gf2x_init(0);
+    b = gf2x_init(0);
+
+    gf2x_xgcd(&a, &b, &g, base, modulus);
+
+    success = gf2x_is_one(g);
+
+    gf2x_mod(inv, a, modulus);
+
+    gf2x_destroy(g);
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+
+    return success;
+}
+
+/**
+ * gf2x_modexp
+ * Compute base to the power exp modulo modulus.
+ */
+int gf2x_modexp( gf2x * res, gf2x base, long int exp, gf2x modulus )
+{
+    gf2x temp;
+    int i;
+
+    if( exp == 0 )
+    {
+        gf2x_one(res);
+        return 1;
+    }
+
+    if( exp < 0 )
+    {
+        temp = gf2x_init(0);
+        gf2x_modinv(&temp, base, modulus);
+        gf2x_modexp(res, base, -exp, modulus);
+        gf2x_destroy(temp);
+        return 1;
+    }
+
+    temp = gf2x_init(0);
+    gf2x_one(&temp);
+
+    for( i = 8*sizeof(long int)-1 ; i >= 0 ; --i )
+    {
+        gf2x_multiply(&temp, temp, temp);
+        gf2x_mod(&temp, temp, modulus);
+
+        if( (exp & (1 << i)) != 0 )
+        {
+            //gf2x_multiply(&temp, temp, base);
+            gf2x_mod(&temp, temp, modulus);
+        }
+    }
+
+    gf2x_copy(res, temp);
+    gf2x_destroy(temp);
     return 1;
 }
 

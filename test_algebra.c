@@ -1738,8 +1738,224 @@ int test_gf2x_xgcd( )
     return equals;
 }
 
+int test_gf2x_lcm()
+{
+    unsigned short int m, n;
+    unsigned int i;
+    int equal;
+    gf2x x, y, l, g, temp;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int success;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
 
 
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 10 + (csprng_generate_ulong(&rng) % 200);
+
+
+    x = gf2x_init(m);
+    csprng_generate(&rng, (x.degree+1+7)/8, x.data);
+    gf2x_trim(&x);
+
+    y = gf2x_init(n);
+    csprng_generate(&rng, (y.degree+1+7)/8, y.data);
+    gf2x_trim(&y);
+
+    printf("testing lcm of GF(2)[x] elements of degrees %i, and %i... (randomness: %u) ", x.degree, y.degree, random);
+
+
+    l = gf2x_init(0);
+    g = gf2x_init(0);
+
+    gf2x_gcd(&g, x, y);
+    gf2x_lcm(&l, x, y);
+
+    temp = gf2x_init(0);
+    gf2x_multiply(&temp, x, y);
+
+    success = gf2x_is_one(g) || (!gf2x_equals(temp, l));
+
+    if( success == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("failure!\n");
+        printf("x: "); gf2x_print(x); printf("\n");
+        printf("y: "); gf2x_print(y); printf("\n");
+        printf("l: "); gf2x_print(l); printf("\n");
+        printf("g: "); gf2x_print(g); printf("\n");
+        printf("p: "); gf2x_print(temp); printf("\n");
+    }
+
+    gf2x_destroy(x);
+    gf2x_destroy(y);
+    gf2x_destroy(g);
+    gf2x_destroy(l);
+    gf2x_destroy(temp);
+
+    return success;
+}
+
+int test_gf2x_modinv()
+{
+    int m, n;
+    unsigned int random;
+    csprng rng;
+    gf2x inv, elm, mod;
+    int success;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 9 + (csprng_generate_ulong(&rng) % (m-9));
+
+    printf("testing gf2x_modinv on polynomials of degree at most %i and %i ... (randomness: %u) ", n, m, random);
+
+    elm = gf2x_init(n);
+    csprng_generate(&rng, n/8+1, elm.data);
+    gf2x_trim(&elm);
+    mod = gf2x_init(m);
+    csprng_generate(&rng, m/8+1, mod.data);
+    gf2x_trim(&mod);
+
+    inv = gf2x_init(0);
+    gf2x_zero(&inv);
+    gf2x_gcd(&inv, elm, mod);
+
+    while( elm.degree >= mod.degree || gf2x_is_one(inv) == 0 )
+    {
+        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
+        elm.degree = n;
+        csprng_generate(&rng, n/8+1, elm.data);
+        gf2x_trim(&elm);
+        mod.degree = m;
+        csprng_generate(&rng, m/8+1, mod.data);
+        gf2x_trim(&mod);
+        gf2x_gcd(&inv, elm, mod);
+    }
+
+    gf2x_modinv(&inv, elm, mod);
+    gf2x_multiply(&inv, inv, elm);
+    gf2x_mod(&inv, inv, mod);
+
+    success = gf2x_is_one(inv);
+
+    if( success == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("failure!\n");
+        printf("elm: "); gf2x_print(elm); printf("\n");
+        printf("mod: "); gf2x_print(mod); printf("\n");
+        gf2x_modinv(&inv, elm, mod);
+        printf("inv: "); gf2x_print(inv); printf("\n");
+        gf2x_multiply(&inv, inv, elm);
+        printf("pro: "); gf2x_print(inv); printf("\n");
+        gf2x_mod(&inv, inv, mod);
+        printf("rem: "); gf2x_print(inv); printf("\n");
+    }
+
+    gf2x_destroy(mod);
+    gf2x_destroy(elm);
+    gf2x_destroy(inv);
+
+    return 1;
+}
+
+int test_gf2x_modexp()
+{
+    int m, n;
+    long int a, b;
+    unsigned int random;
+    csprng rng;
+    gf2x A, B, inv, elm, mod;
+    int success;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 9 + (csprng_generate_ulong(&rng) % (m-9));
+
+    printf("testing gf2x_modexp on polynomials of degree at most %i and %i ... (randomness: %u) ", n, m, random);
+
+    elm = gf2x_init(n);
+    csprng_generate(&rng, n/8+1, elm.data);
+    gf2x_trim(&elm);
+    mod = gf2x_init(m);
+    csprng_generate(&rng, m/8+1, mod.data);
+    gf2x_trim(&mod);
+
+    inv = gf2x_init(0);
+    gf2x_zero(&inv);
+    gf2x_gcd(&inv, elm, mod);
+
+    while( elm.degree >= mod.degree || gf2x_is_one(inv) == 0 )
+    {
+        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
+        elm.degree = n;
+        csprng_generate(&rng, n/8+1, elm.data);
+        gf2x_trim(&elm);
+        mod.degree = m;
+        csprng_generate(&rng, m/8+1, mod.data);
+        gf2x_trim(&mod);
+        gf2x_gcd(&inv, elm, mod);
+    }
+
+    a = csprng_generate_ulong(&rng) >> 2;
+    b = csprng_generate_ulong(&rng) >> 2;
+    
+    if( csprng_generate_ulong(&rng) % 2 == 1 )
+    {
+        a = -a;
+    }
+    if( csprng_generate_ulong(&rng) % 2 == 1 )
+    {
+        b = -b;
+    }
+
+    A = gf2x_init(0);
+    B = gf2x_init(0);
+
+    gf2x_modexp(&A, elm, a, mod);
+    gf2x_modexp(&A, A, b, mod);
+
+    gf2x_modexp(&B, elm, b, mod);
+    gf2x_modexp(&B, B, a, mod);
+
+    success = gf2x_equals(A, B);
+
+    if( success == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("failure!\n");
+    }
+
+    gf2x_destroy(inv);
+    gf2x_destroy(elm);
+    gf2x_destroy(mod);
+    gf2x_destroy(A);
+    gf2x_destroy(B);
+
+    return success;
+}
 
 int main( int argc, char ** argv )
 {
@@ -1780,6 +1996,9 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_divide();
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
 
 #ifdef BIG
     bi_destroy(ninetythree);

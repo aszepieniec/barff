@@ -2,6 +2,7 @@
 #include "gfpm.h"
 #include "hqs.h"
 #include "csprng.h"
+#include "gf2x.h"
 #include "gf256x.h"
 #include "gf65536x.h"
 #include "gf16777216x.h"
@@ -544,7 +545,6 @@ int test_gf256x_multiply( )
     gf256x_multiply(&abc2, ab, c);
 
     equals = gf256x_equals(abc1, abc2);
-    equals &= (a.degree + b.degree + c.degree) == abc1.degree;
 
     gf256x_destroy(a);
     gf256x_destroy(b);
@@ -1452,6 +1452,294 @@ int test_gf16777216x_modexp( )
     return equals;
 }
 
+int test_gf2x_add( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf2x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing addition of GF(2)[x] elements of degrees %i, %i, and %i... (randomness: %u) ", m, n, o, random);
+
+    a = gf2x_init(m);
+    csprng_generate(&rng, (a.degree+1+7)/8, a.data);
+
+    b = gf2x_init(n);
+    csprng_generate(&rng, (b.degree+1+7)/8, b.data);
+
+    c = gf2x_init(o);
+    csprng_generate(&rng, (c.degree+1+7)/8, c.data);
+
+    ab = gf2x_init(0);
+    gf2x_add(&ab, a, b);
+    abc1 = gf2x_init(0);
+    gf2x_add(&abc1, ab, c);
+
+    bc = gf2x_init(0);
+    gf2x_add(&bc, b, c);
+    abc2 = gf2x_init(0);
+    gf2x_add(&abc2, ab, c);
+
+    equals = gf2x_equals(abc1, abc2);
+
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+    gf2x_destroy(c);
+    gf2x_destroy(ab);
+    gf2x_destroy(abc1);
+    gf2x_destroy(bc);
+    gf2x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf2x_multiply( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf2x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 100);
+    n = 10 + (csprng_generate_ulong(&rng) % 100);
+    o = 10 + (csprng_generate_ulong(&rng) % 100);
+
+
+    a = gf2x_init(m);
+    csprng_generate(&rng, (a.degree+1+7)/8, a.data);
+    gf2x_trim(&a);
+
+    b = gf2x_init(n);
+    csprng_generate(&rng, (b.degree+1+7)/8, b.data);
+    gf2x_trim(&b);
+
+    c = gf2x_init(o);
+    csprng_generate(&rng, (c.degree+1+7)/8, c.data);
+    gf2x_trim(&c);
+
+    printf("testing multiplication of GF(2)[x] elements of degrees %i, %i, and %i... (randomness: %u) ", a.degree, b.degree, c.degree, random);
+
+    ab = gf2x_init(0);
+    gf2x_multiply(&ab, a, b);
+    abc1 = gf2x_init(0);
+    gf2x_multiply(&abc1, ab, c);
+
+    bc = gf2x_init(0);
+    gf2x_multiply(&bc, b, c);
+    abc2 = gf2x_init(0);
+    gf2x_multiply(&abc2, ab, c);
+
+    equals = gf2x_equals(abc1, abc2);
+
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+    gf2x_destroy(c);
+    gf2x_destroy(ab);
+    gf2x_destroy(abc1);
+    gf2x_destroy(bc);
+    gf2x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf2x_divide( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf2x numerator, divisor, quotient, remainder, product, sum;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 10 + (csprng_generate_ulong(&rng) % (m-9));
+
+
+    numerator = gf2x_init(m);
+    csprng_generate(&rng, (numerator.degree+1+7)/8, numerator.data);
+    gf2x_trim(&numerator);
+
+    divisor = gf2x_init(n);
+    csprng_generate(&rng, (divisor.degree+1+7)/8, divisor.data);
+    gf2x_trim(&divisor);
+
+    printf("testing division of GF(2)[x] elements of degrees %i, and %i... (randomness: %u) ", numerator.degree, divisor.degree, random);
+
+    quotient = gf2x_init(0);
+    remainder = gf2x_init(0);
+
+    gf2x_divide(&quotient, &remainder, numerator, divisor);
+
+    product = gf2x_init(0);
+    gf2x_multiply(&product, divisor, quotient);
+
+    sum = gf2x_init(0);
+    gf2x_add(&sum, product, remainder);
+
+    equals = gf2x_equals(numerator, sum);
+    equals &= remainder.degree <= divisor.degree; /* includes division by constant */
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("\n");
+        printf("numerator: "); gf2x_print(numerator); printf("\n");
+        printf("divisor: "); gf2x_print(divisor); printf("\n");
+        printf("quotient: "); gf2x_print(quotient); printf("\n");
+        printf("remainder: "); gf2x_print(remainder); printf("\n");
+        printf("product: "); gf2x_print(product); printf("\n");
+        printf("sum:     "); gf2x_print(sum); printf("\n");
+        printf("fail!\n");
+    }
+
+    gf2x_destroy(numerator);
+    gf2x_destroy(divisor);
+    gf2x_destroy(remainder);
+    gf2x_destroy(quotient);
+    gf2x_destroy(product);
+    gf2x_destroy(sum);
+
+    return equals;
+}
+
+int test_gf2x_xgcd( )
+{
+    unsigned short int m, n;
+    unsigned int i;
+    int equal;
+    gf2x x, y, a, b, g, ax, by, sum, quotient, remainder;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 10 + (csprng_generate_ulong(&rng) % 200);
+
+
+    x = gf2x_init(m);
+    csprng_generate(&rng, (x.degree+1+7)/8, x.data);
+    gf2x_trim(&x);
+
+    y = gf2x_init(n);
+    csprng_generate(&rng, (y.degree+1+7)/8, y.data);
+    gf2x_trim(&y);
+
+    printf("testing xgcd of GF(2)[x] elements of degrees %i, and %i... (randomness: %u) ", x.degree, y.degree, random);
+
+    quotient = gf2x_init(0);
+    remainder = gf2x_init(0);
+    a = gf2x_init(0);
+    b = gf2x_init(0);
+    g = gf2x_init(0);
+    gf2x_xgcd(&a, &b, &g, x, y);
+
+    ax = gf2x_init(0);
+    by = gf2x_init(0);
+    sum = gf2x_init(0);
+    gf2x_multiply(&ax, a, x);
+    gf2x_multiply(&by, b, y);
+    gf2x_add(&sum, ax, by);
+    equals = gf2x_equals(g, sum);
+
+    gf2x_divide(&quotient, &remainder, x, g);
+    equals &= gf2x_is_zero(remainder);
+
+    gf2x_divide(&quotient, &remainder, y, g);
+    equals &= gf2x_is_zero(remainder);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+        printf("x: "); gf2x_print(x); printf("\n");
+        printf("y: "); gf2x_print(y); printf("\n");
+        printf("a: "); gf2x_print(a); printf("\n");
+        printf("ax: "); gf2x_print(ax); printf("\n");
+        printf("b: "); gf2x_print(b); printf("\n");
+        printf("by: "); gf2x_print(by); printf("\n");
+        printf("sum: "); gf2x_print(sum); printf("\n");
+        printf("g =  "); gf2x_print(g); printf("\n");
+
+        gf2x_divide(&quotient, &remainder, x, g);
+        printf("x // g = "); gf2x_print(quotient); printf("\n");
+        printf("x %% g = "); gf2x_print(remainder); printf("\n");
+    }
+
+    gf2x_destroy(x);
+    gf2x_destroy(y);
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+    gf2x_destroy(g);
+    gf2x_destroy(ax);
+    gf2x_destroy(by);
+    gf2x_destroy(sum);
+    gf2x_destroy(remainder);
+    gf2x_destroy(quotient);
+
+    return equals;
+}
+
+
+
 
 int main( int argc, char ** argv )
 {
@@ -1487,7 +1775,11 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_multiply();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_add();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_divide();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
 
 #ifdef BIG
     bi_destroy(ninetythree);

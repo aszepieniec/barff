@@ -1957,6 +1957,77 @@ int test_gf2x_modexp()
     return success;
 }
 
+int test_gf2x_karatsuba( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf2x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 2000);
+    n = 10 + (csprng_generate_ulong(&rng) % 2000);
+    o = 10 + (csprng_generate_ulong(&rng) % 2000);
+
+
+    a = gf2x_init(m);
+    csprng_generate(&rng, (a.degree+1+7)/8, a.data);
+    gf2x_trim(&a);
+
+    b = gf2x_init(n);
+    csprng_generate(&rng, (b.degree+1+7)/8, b.data);
+    gf2x_trim(&b);
+
+    c = gf2x_init(o);
+    csprng_generate(&rng, (c.degree+1+7)/8, c.data);
+    gf2x_trim(&c);
+
+    printf("testing karatsuba of GF(2)[x] elements of degrees %i, %i, and %i... (randomness: %u) ", a.degree, b.degree, c.degree, random);
+
+    ab = gf2x_init(0);
+    gf2x_karatsuba(&ab, a, b);
+    abc1 = gf2x_init(0);
+    gf2x_karatsuba(&abc1, ab, c);
+
+    bc = gf2x_init(0);
+    gf2x_karatsuba(&bc, b, c);
+    abc2 = gf2x_init(0);
+    gf2x_karatsuba(&abc2, ab, c);
+
+    equals = gf2x_equals(abc1, abc2);
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+        printf("ab: "); gf2x_print(ab); printf("\n");
+        printf("but should be ...\n");
+        gf2x_multiply(&ab, a, b);
+        printf("ab: "); gf2x_print(ab); printf("\n");
+    }
+
+    gf2x_destroy(a);
+    gf2x_destroy(b);
+    gf2x_destroy(c);
+    gf2x_destroy(ab);
+    gf2x_destroy(abc1);
+    gf2x_destroy(bc);
+    gf2x_destroy(abc2);
+
+    return equals;
+}
+
+
 int main( int argc, char ** argv )
 {
     unsigned int i;
@@ -1999,6 +2070,7 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
     for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
 
 #ifdef BIG
     bi_destroy(ninetythree);

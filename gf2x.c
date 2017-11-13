@@ -137,7 +137,7 @@ int gf2x_add( gf2x* dest, gf2x lhs, gf2x rhs )
 
 /**
  * gf2x_multiply
- * Multiple two GF(256)[x] elements together.
+ * Multiple two GF(2)[x] elements together.
  */
 int gf2x_multiply( gf2x* dest, gf2x lhs, gf2x rhs )
 {
@@ -146,7 +146,17 @@ int gf2x_multiply( gf2x* dest, gf2x lhs, gf2x rhs )
     unsigned char * data;
     gf2x temp, shifted;
 
-    if( gf2x_is_zero(rhs) == 1 || gf2x_is_zero(lhs) == 1 )
+    if( rhs.degree > GF2X_KARATSUBA_CUTOFF && lhs.degree > GF2X_KARATSUBA_CUTOFF )
+    {
+        return gf2x_karatsuba(dest, lhs, rhs);
+    }
+
+    if( rhs.degree < lhs.degree )
+    {
+        return gf2x_multiply(dest, rhs, lhs);
+    }
+
+    if( gf2x_is_zero(lhs) == 1 )
     {
         gf2x_zero(dest);
         return 1;
@@ -172,6 +182,113 @@ int gf2x_multiply( gf2x* dest, gf2x lhs, gf2x rhs )
     gf2x_destroy(shifted);
 
     return 1;
+}
+
+/**
+ * gf2x_karatsuba
+ * Divide and conquer method for asymptotically faster multi-
+ * plication.
+ */
+int gf2x_karatsuba( gf2x* dest, gf2x lhs, gf2x rhs )
+{
+    gf2x left_lo, left_hi, right_lo, right_hi, lolo, hihi;
+    int left_hi_degree, right_hi_degree;
+    gf2x z1, z2, z3;
+    int cut;
+    int max;
+    int i;
+
+    if( lhs.degree < GF2X_KARATSUBA_CUTOFF )
+    {
+        return gf2x_multiply(dest, lhs, rhs);
+    }
+    if( rhs.degree < GF2X_KARATSUBA_CUTOFF )
+    {
+        return gf2x_multiply(dest, rhs, lhs);
+    }
+
+    max = lhs.degree;
+    if( rhs.degree > max )
+    {
+        max = rhs.degree;
+    }
+
+    /* determine cutting point */
+    cut = ((max / 2)/8)*8 - 1;
+
+    /* split */
+    left_lo = gf2x_init(cut);
+    right_lo = gf2x_init(cut);
+    left_hi_degree = lhs.degree-cut-1;
+    if( left_hi_degree < 0 )
+    {
+        gf2x_copy(&left_lo, lhs);
+        left_hi = gf2x_init(0);
+        gf2x_zero(&left_hi);
+    }
+    else
+    {
+        left_hi = gf2x_init(left_hi_degree);
+        for( i = 0 ; i < (cut+1)/8 ; ++i )
+        {
+            left_lo.data[i] = lhs.data[i];
+        }
+        for( i = 0 ; i < (left_hi.degree + 1 + 7)/8 ; ++i )
+        {
+            left_hi.data[i] = lhs.data[(cut+1)/8 + i];
+        }
+    }
+    right_hi_degree = rhs.degree-cut-1;
+    if( right_hi_degree < 0 )
+    {
+        gf2x_copy(&right_lo, rhs);
+        right_hi = gf2x_init(0);
+        gf2x_zero(&right_hi);
+    }
+    else
+    {
+        right_hi = gf2x_init(rhs.degree-cut-1);
+        for( i = 0 ; i < (cut+1)/8 ; ++i )
+        {
+            right_lo.data[i] = rhs.data[i];
+        }
+        for( i = 0 ; i < (right_hi.degree + 1 + 7)/8 ; ++i )
+        {
+            right_hi.data[i] = rhs.data[(cut+1)/8 + i];
+        }
+    }
+
+    /* recurse */
+    z1 = gf2x_init(0);
+    gf2x_karatsuba(&z1, left_lo, right_lo);
+    z2 = gf2x_init(0);
+    lolo = gf2x_init(0);
+    hihi = gf2x_init(0);
+    gf2x_add(&lolo, left_lo, right_lo);
+    gf2x_add(&hihi, left_hi, right_hi);
+    gf2x_karatsuba(&z2, left_lo, right_lo);
+    z3 = gf2x_init(0);
+    gf2x_karatsuba(&z3, left_hi, right_hi);
+
+    /* recombine */
+    gf2x_shift_left(&hihi, z3, 2*cut+2);
+    gf2x_shift_left(&lolo, z2, cut+1);
+    gf2x_add(dest, z1, lolo);
+    gf2x_add(dest, *dest, hihi);
+
+    /* clean up */
+    gf2x_destroy(left_lo);
+    gf2x_destroy(left_hi);
+    gf2x_destroy(right_lo);
+    gf2x_destroy(right_hi);
+    gf2x_destroy(lolo);
+    gf2x_destroy(hihi);
+    gf2x_destroy(z1);
+    gf2x_destroy(z2);
+    gf2x_destroy(z3);
+
+    return 1;
+
 }
 
 /**

@@ -2027,6 +2027,86 @@ int test_gf2x_karatsuba( )
     return equals;
 }
 
+int test_gf2x_minpoly()
+{
+    int m, n;
+    long int a, b;
+    unsigned int random;
+    csprng rng;
+    gf2x min, elm, mod, ev, raised;
+    int success;
+    int i;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = 10 + (csprng_generate_ulong(&rng) % 200);
+    n = 9 + (csprng_generate_ulong(&rng) % (m-9));
+
+    printf("testing gf2x_minpoly on polynomials of degree at most %i and %i ... (randomness: %u) ", n, m, random);
+
+    elm = gf2x_init(n);
+    csprng_generate(&rng, n/8+1, elm.data);
+    gf2x_trim(&elm);
+    mod = gf2x_init(m);
+    csprng_generate(&rng, m/8+1, mod.data);
+    gf2x_trim(&mod);
+
+    min = gf2x_init(0);
+    gf2x_zero(&min);
+    gf2x_gcd(&min, elm, mod);
+
+    while( elm.degree >= mod.degree || gf2x_is_one(min) == 0 )
+    {
+        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
+        elm.degree = n;
+        csprng_generate(&rng, n/8+1, elm.data);
+        gf2x_trim(&elm);
+        mod.degree = m;
+        csprng_generate(&rng, m/8+1, mod.data);
+        gf2x_trim(&mod);
+        gf2x_gcd(&min, elm, mod);
+    }
+
+    gf2x_minpoly(&min, elm, mod);
+
+    /* test if minpoly evaluates to zero in elm */
+    ev = gf2x_init(0);
+    raised = gf2x_init(0);
+    gf2x_one(&raised);
+    gf2x_zero(&ev);
+    for( i = 0 ; i <= min.degree ; ++i )
+    {
+        if( (min.data[i/8] & (1 << (i % 8))) != 0 )
+        {
+            gf2x_add(&ev, ev, raised);
+        }
+        gf2x_multiply(&raised, raised, elm);
+        gf2x_mod(&raised, raised, mod);
+    }
+
+    success = gf2x_is_zero(ev);
+
+    if( success == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("failure!\n");
+        gf2x_print(min); printf("("); gf2x_print(elm); printf(") = "); gf2x_print(ev); printf(" mod "); gf2x_print(mod); printf("\n");
+    }
+
+    gf2x_destroy(raised);
+    gf2x_destroy(ev);
+    gf2x_destroy(min);
+    gf2x_destroy(elm);
+    gf2x_destroy(mod);
+
+    return success;
+}
 
 int main( int argc, char ** argv )
 {
@@ -2063,14 +2143,15 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_add();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_divide();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
 
 #ifdef BIG
     bi_destroy(ninetythree);

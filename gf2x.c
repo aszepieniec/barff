@@ -738,6 +738,152 @@ int gf2x_modexp( gf2x * res, gf2x base, long int exp, gf2x modulus )
 }
 
 /**
+ * gf2x_minpoly
+ * Compute the minimal polynomial of the given extension field
+ * element which is a member of the extension field defined by
+ * the modulus.
+ */
+int gf2x_minpoly( gf2x * dest, gf2x elm, gf2x modulus )
+{
+    unsigned char * data;
+    unsigned char temp;
+    unsigned int * pivots;
+    unsigned int * pivot_rows;
+    int num_pivots;
+    unsigned int * frees;
+    int num_frees;
+    int col, row, pivot;
+    int width, height;
+    int i, j;
+    gf2x raised;
+
+    height = modulus.degree;
+    width = modulus.degree + 1;
+    data = malloc(height*width);
+
+    /* compile matrix */
+    raised = gf2x_init(0);
+    gf2x_one(&raised);
+    for( j = 0 ; j < width ; ++j )
+    {
+        for( i = 0 ; i <= raised.degree ; ++i )
+        {
+            if( (raised.data[i/8] & (1 << (i%8))) != 0 )
+            {
+                data[i*width + j] = 1;
+            }
+            else
+            {
+                data[i*width + j] = 0;
+            }
+        }
+        for( ; i < height ; ++i )
+        {
+            data[i*width + j] = 0;
+        }
+        gf2x_multiply(&raised, raised, elm);
+        gf2x_mod(&raised, raised, modulus);
+    }
+    gf2x_destroy(raised);
+
+    /* reduce to echelon */
+    pivots = malloc(sizeof(unsigned int)*width);
+    pivot_rows = malloc(sizeof(unsigned int)*width);
+    num_pivots = 0;
+    frees = malloc(sizeof(unsigned int)*width);
+    num_frees = 0;
+    row = 0;
+    for( col = 0 ; col < width ; ++col )
+    {
+        /* if not pivot element */
+        if( data[row*width + col] != 1 )
+        {
+            /* find pivot element */
+            for( pivot = row + 1 ; pivot < height ; ++pivot )
+            {
+                if( data[pivot*width + col] == 1 )
+                {
+                    break;
+                }
+            }
+            /* if no pivot element, mark free */
+            if( pivot == height )
+            {
+                frees[num_frees++] = col;
+                continue;
+            }
+            /* otherwise swap rows */
+            for( i = 0 ; i < width ; ++i )
+            {
+                temp = data[row*width + i];
+                data[row*width + i] = data[pivot*width + i];
+                data[pivot*width + i] = temp;
+            }
+        }
+
+        /* clear pivot column */
+        for( i = 0 ; i < height ; ++i )
+        {
+            /* skip working row */
+            if( i == row )
+            {
+                continue;
+            }
+
+            /* if element at (i, col) is nonzero, add working row */
+            if( data[i*width + col] == 1 )
+            {
+                for( j = col ; j < width ; ++j )
+                {
+                    data[i*width + j] ^= data[row*width + j];
+                }
+            }
+        }
+
+        /* mark as pivot and increase working row */
+        pivot_rows[num_pivots] = row;
+        pivots[num_pivots] = col;
+        num_pivots += 1;
+        row += 1;
+        
+        /* if we had all rows, mark the remaining columns as frees and break */
+        if( row == height )
+        {
+            for( i = col + 1 ; i < width ; ++i )
+            {
+                frees[num_frees++] = i;
+            }
+            break;
+        }
+    }
+
+    /* minpoly = kernel vector associated with first free variable */
+    gf2x_destroy(*dest);
+    *dest = gf2x_init(frees[0]);
+    for( i = 0 ; i < (dest->degree+1+7)/8 ; ++i )
+    {
+        dest->data[i] = 0;
+    }
+    dest->data[frees[0]/8] ^= 1 << (frees[0] % 8);
+    for( i = 0 ; i < num_pivots ; ++i )
+    {
+        if( pivots[i] > frees[0] )
+        {
+            break;
+        }
+        dest->data[pivot_rows[i]/8] ^= data[pivot_rows[i]*width + frees[0]] << (pivot_rows[i] % 8);
+    }
+
+    /* clean up */
+    free(data);
+    free(pivots);
+    free(pivot_rows);
+    free(frees);
+
+    return 1;
+}
+
+/**
  * gf2x_print
  */
 int gf2x_print( gf2x p )

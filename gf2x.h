@@ -28,6 +28,9 @@ int gf2x_mod( gf2x* res, gf2x poly, gf2x modulus );
 int gf2x_modinv( gf2x * inv, gf2x base, gf2x modulus );
 int gf2x_modexp( gf2x * res, gf2x base, long int exp, gf2x modulus );
 
+int gf2x_minpoly( gf2x * res, gf2x elm, gf2x modulus );
+
+
 int gf2x_print( gf2x p );
 
 #endif

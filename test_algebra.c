@@ -1973,9 +1973,9 @@ int test_gf2x_karatsuba( )
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
 
 
-    m = 10 + (csprng_generate_ulong(&rng) % 2000);
-    n = 10 + (csprng_generate_ulong(&rng) % 2000);
-    o = 10 + (csprng_generate_ulong(&rng) % 2000);
+    m = 10 + (csprng_generate_ulong(&rng) % 10000);
+    n = 10 + (csprng_generate_ulong(&rng) % 10000);
+    o = 10 + (csprng_generate_ulong(&rng) % 10000);
 
 
     a = gf2x_init(m);
@@ -2003,6 +2003,12 @@ int test_gf2x_karatsuba( )
     gf2x_karatsuba(&abc2, ab, c);
 
     equals = gf2x_equals(abc1, abc2);
+    equals &= gf2x_divides(a, abc1);
+    equals &= gf2x_divides(b, abc1);
+    equals &= gf2x_divides(c, abc1);
+    equals &= gf2x_divides(a, abc2);
+    equals &= gf2x_divides(b, abc2);
+    equals &= gf2x_divides(c, abc2);
     if( equals == 1 )
     {
         printf("success!\n");
@@ -2010,10 +2016,13 @@ int test_gf2x_karatsuba( )
     else
     {
         printf("fail!\n");
-        printf("ab: "); gf2x_print(ab); printf("\n");
-        printf("but should be ...\n");
-        gf2x_multiply(&ab, a, b);
-        printf("ab: "); gf2x_print(ab); printf("\n");
+        printf("a: "); gf2x_print(a); printf(" (%i) \n", a.degree);
+        printf("b: "); gf2x_print(b); printf(" (%i) \n", b.degree);
+        printf("c: "); gf2x_print(c); printf(" (%i) \n", c.degree);
+        printf("a*b: "); gf2x_print(ab); printf(" (%i) \n", ab.degree);
+        printf("b*c: "); gf2x_print(bc); printf(" (%i) \n", bc.degree);
+        printf("a*b*c: "); gf2x_print(abc1); printf(" (%i) \n", abc1.degree);
+        printf("a*b*c: "); gf2x_print(abc2); printf(" (%i) \n", abc2.degree);
     }
 
     gf2x_destroy(a);
@@ -2143,15 +2152,15 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_add();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_divide();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
-    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_add();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_divide();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
+    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
 
 #ifdef BIG
     bi_destroy(ninetythree);

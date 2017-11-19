@@ -149,11 +149,11 @@ unsigned int gf65536_exp( unsigned int element, int exponent )
         return gf65536_exp(gf65536_inverse(element), -exponent);
     }
 
-    acc = 0;
-    for( i = sizeof(int) * 8 - 1 ; i >= 0 ; ++i )
+    acc = 1;
+    for( i = sizeof(int) * 8 - 1 ; i >= 0 ; --i )
     {
         acc = gf65536_multiply(acc, acc);
-        if( exponent & (1 << i) != 0 )
+        if( (exponent & (1 << i)) != 0 )
         {
             acc = gf65536_multiply(acc, element);
         }
@@ -590,8 +590,8 @@ unsigned int gf65536x_eval( gf65536x polynomial, unsigned int point )
     xi = 1;
     for( i = 0 ; i < 1 + polynomial.degree ; ++i )
     {
-        coeff = polynomial.data[2*i] | (polynomial.data[2*i] << 8);
-        acc = acc ^ gf65536_multiply(polynomial.data[i], xi);
+        coeff = polynomial.data[2*i] | (polynomial.data[2*i+1] << 8);
+        acc = acc ^ gf65536_multiply(coeff, xi);
         xi = gf65536_multiply(xi, point);
     }
 

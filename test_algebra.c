@@ -6,6 +6,7 @@
 #include "gf256x.h"
 #include "gf65536x.h"
 #include "gf16777216x.h"
+#include "gf4096x.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2117,6 +2118,355 @@ int test_gf2x_minpoly()
     return success;
 }
 
+
+int test_gf4096_inverse( )
+{
+    csprng rng;
+    unsigned int random;
+    int equals;
+    unsigned int a, b, c;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    printf("testing inverse computation of GF(4096) elements ... ");
+
+    a = csprng_generate_ulong(&rng) % 0xffff;
+
+    b = gf4096_inverse(a);
+
+    c = gf4096_multiply(a, b);
+
+    if( c == 1 || a == 0 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf4096x_add( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf4096x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing addition of GF(4096)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf4096x_init(m);
+    csprng_generate(&rng, 2*a.degree+2, a.data);
+
+    b = gf4096x_init(n);
+    csprng_generate(&rng, 2*b.degree+2, b.data);
+
+    c = gf4096x_init(o);
+    csprng_generate(&rng, 2*c.degree+2, c.data);
+
+    ab = gf4096x_init(0);
+    gf4096x_add(&ab, a, b);
+    abc1 = gf4096x_init(0);
+    gf4096x_add(&abc1, ab, c);
+
+    bc = gf4096x_init(0);
+    gf4096x_add(&bc, b, c);
+    abc2 = gf4096x_init(0);
+    gf4096x_add(&abc2, ab, c);
+
+    equals = gf4096x_equals(abc1, abc2);
+
+    gf4096x_destroy(a);
+    gf4096x_destroy(b);
+    gf4096x_destroy(c);
+    gf4096x_destroy(ab);
+    gf4096x_destroy(abc1);
+    gf4096x_destroy(bc);
+    gf4096x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf4096x_multiply( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf4096x a, b, c, ab, abc1, bc, abc2;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 100;
+    n = csprng_generate_ulong(&rng) % 100;
+    o = csprng_generate_ulong(&rng) % 100;
+
+    printf("testing multiplication of GF(4096)[x] elements of degrees %i, %i, and %i... ", m, n, o);
+
+    a = gf4096x_init(m);
+    csprng_generate(&rng, 2*a.degree+2, a.data);
+
+    b = gf4096x_init(n);
+    csprng_generate(&rng, 2*b.degree+2, b.data);
+
+    c = gf4096x_init(o);
+    csprng_generate(&rng, 2*c.degree+2, c.data);
+
+    ab = gf4096x_init(0);
+    gf4096x_multiply(&ab, a, b);
+    abc1 = gf4096x_init(0);
+    gf4096x_multiply(&abc1, ab, c);
+
+    bc = gf4096x_init(0);
+    gf4096x_multiply(&bc, b, c);
+    abc2 = gf4096x_init(0);
+    gf4096x_multiply(&abc2, ab, c);
+
+    equals = gf4096x_equals(abc1, abc2);
+    equals &= (a.degree + b.degree + c.degree) == abc1.degree;
+
+    gf4096x_destroy(a);
+    gf4096x_destroy(b);
+    gf4096x_destroy(c);
+    gf4096x_destroy(ab);
+    gf4096x_destroy(abc1);
+    gf4096x_destroy(bc);
+    gf4096x_destroy(abc2);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+        return 1;
+    }
+    else
+    {
+        printf("fail!\n");
+        return 0;
+    }
+}
+
+int test_gf4096x_divide( )
+{
+    unsigned short int m, n, o;
+    unsigned int i;
+    int equal;
+    gf4096x numerator, divisor, quotient, remainder, product, sum;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % m;
+
+    printf("testing division of GF(4096)[x] elements of degrees %i, and %i... (randomness: %u) ", m, n, random);
+
+    numerator = gf4096x_init(m);
+    csprng_generate(&rng, 2*numerator.degree+2, numerator.data);
+
+    divisor = gf4096x_init(n);
+    csprng_generate(&rng, 2*divisor.degree+2, divisor.data);
+
+    quotient = gf4096x_init(0);
+    remainder = gf4096x_init(0);
+    gf4096x_divide(&quotient, &remainder, numerator, divisor);
+
+    product = gf4096x_init(0);
+    gf4096x_multiply(&product, divisor, quotient);
+
+    sum = gf4096x_init(0);
+    gf4096x_add(&sum, product, remainder);
+
+    equals = gf4096x_equals(numerator, sum);
+    equals &= remainder.degree <= divisor.degree; /* includes division by constant */
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("\n");
+        printf("numerator: "); gf4096x_print(numerator); printf("\n");
+        printf("(numerator degree: %i)\n", numerator.degree);
+        printf("divisor: "); gf4096x_print(divisor); printf("\n");
+        printf("(divisor degree: %i)\n", divisor.degree);
+        printf("quotient: "); gf4096x_print(quotient); printf("\n");
+        printf("remainder: "); gf4096x_print(remainder); printf("\n");
+        printf("(remainder degree: %i)\n", remainder.degree);
+        printf("product: "); gf4096x_print(product); printf("\n");
+        printf("sum: "); gf4096x_print(sum); printf("\n");
+        printf("(sum degree: %i)\n", sum.degree);
+        gf4096x_add(&sum, sum, numerator);
+        printf("difference: "); gf4096x_print(sum); printf("\n");
+        printf("(difference degree: %i)\n", sum.degree);
+        printf("fail!\n");
+    }
+
+    gf4096x_destroy(numerator);
+    gf4096x_destroy(divisor);
+    gf4096x_destroy(remainder);
+    gf4096x_destroy(quotient);
+    gf4096x_destroy(product);
+    gf4096x_destroy(sum);
+
+    return equals;
+}
+
+int test_gf4096x_xgcd( )
+{
+    unsigned short int m, n;
+    unsigned int i;
+    int equal;
+    gf4096x x, y, a, b, g, ax, by, sum, quotient, remainder;
+    csprng rng;
+    unsigned int random;
+    unsigned char * randomness;
+    int equals;
+
+    random = rand();
+    csprng_init(&rng);
+    csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
+
+
+    m = csprng_generate_ulong(&rng) % 200;
+    n = csprng_generate_ulong(&rng) % 200;
+
+    printf("testing xgcd GF(4096)[x] elements of degrees %i, and %i... ", m, n);
+
+    x = gf4096x_init(m);
+    csprng_generate(&rng, 2*x.degree+2, x.data);
+
+    y = gf4096x_init(n);
+    csprng_generate(&rng, 2*y.degree+2, y.data);
+
+    quotient = gf4096x_init(0);
+    remainder = gf4096x_init(0);
+    a = gf4096x_init(0);
+    b = gf4096x_init(0);
+    g = gf4096x_init(0);
+    gf4096x_xgcd(&a, &b, &g, x, y);
+
+    ax = gf4096x_init(0);
+    by = gf4096x_init(0);
+    sum = gf4096x_init(0);
+    gf4096x_multiply(&ax, a, x);
+    gf4096x_multiply(&by, b, y);
+    gf4096x_add(&sum, ax, by);
+    equals = gf4096x_equals(g, sum);
+
+    gf4096x_divide(&quotient, &remainder, x, g);
+    equals &= gf4096x_is_zero(remainder);
+
+    gf4096x_divide(&quotient, &remainder, y, g);
+    equals &= gf4096x_is_zero(remainder);
+
+    if( equals == 1 )
+    {
+        printf("success!\n");
+    }
+    else
+    {
+        printf("fail!\n");
+        printf("x: "); gf4096x_print(x); printf("\n");
+        printf("y: "); gf4096x_print(y); printf("\n");
+        printf("a: "); gf4096x_print(a); printf("\n");
+        printf("b: "); gf4096x_print(b); printf("\n");
+        printf("g: "); gf4096x_print(g); printf("\n");
+
+    gf4096x_multiply(&ax, a, x);
+    gf4096x_multiply(&by, b, y);
+    gf4096x_add(&sum, ax, by);
+
+        if( gf4096x_equals(g, sum) == 1 )
+        {
+            printf("sum equals\n");
+        }
+        else
+        {
+            printf("sum is different\n");
+            printf("ax: "); gf4096x_print(ax); printf("\n");
+            printf("by: "); gf4096x_print(by); printf("\n");
+            printf("sum: "); gf4096x_print(sum); printf("\n");
+            printf("g = "); gf4096x_print(g); printf("\n");
+        }
+
+    gf4096x_divide(&quotient, &remainder, x, g);
+        if( gf4096x_is_zero(remainder) == 1 )
+        {
+            printf("x is zero mod g\n");
+        }
+        else
+        {
+            printf("x is nonzero mod g\n");
+        }
+
+    gf4096x_divide(&quotient, &remainder, y, g);
+        if( gf4096x_is_zero(remainder) == 1 )
+        {
+            printf("y is zero mod g\n");
+        }
+        else
+        {
+            printf("y is nonzero mod g\n");
+        }
+    }
+
+    gf4096x_destroy(x);
+    gf4096x_destroy(y);
+    gf4096x_destroy(a);
+    gf4096x_destroy(b);
+    gf4096x_destroy(g);
+    gf4096x_destroy(ax);
+    gf4096x_destroy(by);
+    gf4096x_destroy(sum);
+    gf4096x_destroy(remainder);
+    gf4096x_destroy(quotient);
+
+    return equals;
+}
+
+
+
+
 int main( int argc, char ** argv )
 {
     unsigned int i;
@@ -2159,8 +2509,13 @@ int main( int argc, char ** argv )
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
-    for( i = 0 ; i < 100 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
+    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
     for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_xgcd();
 
 #ifdef BIG
     bi_destroy(ninetythree);

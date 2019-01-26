@@ -8,11 +8,15 @@ typedef struct
 } gf2x;
 
 gf2x gf2x_init( int deg );
+int gf2x_zero( gf2x* op );
+int gf2x_one( gf2x* op );
 int gf2x_copy( gf2x* dest, gf2x source );
 int gf2x_destroy( gf2x p );
 
 int gf2x_is_zero( gf2x poly );
 int gf2x_is_one( gf2x poly );
+int gf2x_divides( gf2x lhs, gf2x rhs );
+int gf2x_equals( gf2x lhs, gf2x rhs );
 
 int gf2x_trim( gf2x* poly );
 int gf2x_add( gf2x* dest, gf2x lhs, gf2x rhs );

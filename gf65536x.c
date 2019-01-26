@@ -43,15 +43,12 @@ unsigned int gf65536_multiply( unsigned int lhs, unsigned int rhs )
 
     if( product.degree >= modulus.degree )
     {
-        //printf("product: "); gf256x_print(product); printf("\n");
-        //printf("modulus: "); gf256x_print(modulus); printf("\n");
         gf256x_divide(&quotient, &remainder, product, modulus);
     }
     else
     {
         gf256x_copy(&remainder, product);
     }
-    //printf("remainder: "); gf256x_print(remainder); printf("\n");
 
     if( gf256x_is_zero(remainder) == 1 )
     {
@@ -66,7 +63,6 @@ unsigned int gf65536_multiply( unsigned int lhs, unsigned int rhs )
         result = remainder.data[0] | (remainder.data[1] << 8);
     }
 
-    //printf("((hex2Fx('"); gf256x_print(left); printf("') * hex2Fx('"); gf256x_print(right); printf("')) %% hex2Fx('"); gf256x_print(modulus); printf("')) == hex2Fx('"); gf256x_print(remainder); printf("')\n");
 
     gf256x_destroy(modulus);
     gf256x_destroy(quotient);
@@ -373,7 +369,6 @@ int gf65536x_multiply_constant_shift( gf65536x* dest, gf65536x poly, unsigned in
         product = gf65536_multiply(lhs, constant);
         data[2*i] = product & 0xff;
         data[2*i + 1] = (product >> 8) & 0xff;
-        //data[i] = gf65536_multiply(poly.data[i-shift], constant);
     }
 
     free(dest->data);
@@ -472,8 +467,6 @@ int gf65536x_divide( gf65536x* quo, gf65536x* rem, gf65536x num, gf65536x diviso
 
         quotient_data[2*i] = compl & 0xff;
         quotient_data[2*i+1] = (compl >> 8) & 0xff;
-        //quotient.data[2*i] = compl & 0xff;
-        //quotient.data[2*i+1] = (compl >> 8) & 0xff;
     
         gf65536x_add(&remainder, remainder, poly);
 
@@ -594,8 +587,6 @@ unsigned int gf65536x_eval( gf65536x polynomial, unsigned int point )
         acc = acc ^ gf65536_multiply(coeff, xi);
         xi = gf65536_multiply(xi, point);
     }
-
-//    printf("evaluating polynomial "); gf65536x_print(polynomial); printf(" int point %02x; result: %02x\n", point, acc);
 
     return acc;
 }

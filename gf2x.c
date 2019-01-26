@@ -126,10 +126,6 @@ int gf2x_add( gf2x* dest, gf2x lhs, gf2x rhs )
     dest->degree = lhs.degree;
     dest->data = data;
 
-    //printf("lhs: "); gf2x_print(lhs); printf("\n");
-    //printf("rhs: "); gf2x_print(rhs); printf("\n");
-    //printf("res: "); gf2x_print(*dest); printf("\n");
-
     gf2x_trim(dest);
 
     return 1;
@@ -304,22 +300,14 @@ int gf2x_equals( gf2x lhs, gf2x rhs )
     int equal;
     if( lhs.degree != rhs.degree )
     {
-        //printf("degrees are different.\n");
         return 0;
     }
     equal = 1;
     for( i = 0 ; i < lhs.degree/8 ; ++i )
     {
         equal = equal & ((lhs.data[i] ^ rhs.data[i]) == 0);
-        //if( (lhs.data[i] ^ rhs.data[i]) != 0 )
-        //    printf("found difference.\n");
     }
     equal = equal & ((unsigned char)(lhs.data[lhs.degree/8] << (8 - (lhs.degree % 8))) ^ (unsigned char)(rhs.data[rhs.degree/8] << (8 - (lhs.degree % 8)))) == 0;
-    //if( (unsigned char)(((lhs.data[lhs.degree/8] ^ rhs.data[rhs.degree/8]) << (8 - (lhs.degree % 8)))) != 0 )
-    //{
-    //    printf("%02x vs %02x for degree mod 8 %i\n", (unsigned char)(lhs.data[lhs.degree/8] << (8 - (lhs.degree % 8))), (unsigned char)(rhs.data[rhs.degree/8] << (8 - (rhs.degree % 8))), lhs.degree);
-    //    printf("found difference at end.\n");
-    //}
     return equal;
 }
 
@@ -401,14 +389,6 @@ int gf2x_shift_left( gf2x* dest, gf2x poly, unsigned int shift )
     dest->data = data;
     dest->degree = degree;
 
-    //printf("pre-shift: ");
-    //for( i = 0 ; i < shift ; ++i ) printf("-");
-    //gf2x_print(poly); printf("\n");
-
-
-    //printf("postshift: ");
-    //gf2x_print(*dest); printf("\n");
-
     return 1;
 }
 
@@ -426,10 +406,6 @@ int gf2x_trim( gf2x* poly )
     if( poly->degree < 0 || (poly->data[poly->degree/8] & (1 << (poly->degree % 8))) != 0 )
     {
         return 1;
-    }
-    else
-    {
-        //printf("trimming "); gf2x_print(*poly); printf("\n");
     }
 
     for( i = poly->degree % 8 ; i >= 0 ; --i )
@@ -491,7 +467,6 @@ int gf2x_divide( gf2x* quo, gf2x* rem, gf2x num, gf2x divisor )
     /* make sure divisor leading coefficient is not zero */
     if( divisor.data[(divisor.degree/8)] & (1 << (divisor.degree%8)) == 0 )
     {
-        //printf("lc of divisor is not zero\n");
         poly = gf2x_init(0);
         gf2x_copy(&poly, divisor);
         gf2x_trim(&poly);
@@ -503,7 +478,6 @@ int gf2x_divide( gf2x* quo, gf2x* rem, gf2x num, gf2x divisor )
     /* make sure numerator leading coefficient is not zero */
     if( num.data[num.degree/8] & (1 << (num.degree % 8)) == 0 )
     {
-        //printf("lc of num is not zero\n");
         poly = gf2x_init(0);
         gf2x_copy(&poly, num);
         gf2x_trim(&poly);
@@ -746,7 +720,6 @@ int gf2x_modexp( gf2x * res, gf2x base, long int exp, gf2x modulus )
 
         if( (exp & (1 << i)) != 0 )
         {
-            //gf2x_multiply(&temp, temp, base);
             gf2x_mod(&temp, temp, modulus);
         }
     }

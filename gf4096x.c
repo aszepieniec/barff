@@ -227,6 +227,22 @@ int gf4096x_equals( gf4096x lhs, gf4096x rhs )
 }
 
 /**
+ * gf4096x_is_one
+ * Determine if the given polynomial is equal to one. Return one if
+ * so, zero otherwise.
+ */
+int gf4096x_is_one( gf4096x p )
+{
+    int one;
+    int i;
+    one = 1;
+    one &= (p.data[0] == 1);
+    one &= ((p.data[1] & 0xf) == 0);
+    one &= (p.degree == 0);
+    return one;
+}
+
+/**
  * gf4096x_is_zero
  * Determine if the given polynomial is equal to zero. Return one if
  * so, zero otherwise.
@@ -338,6 +354,14 @@ int gf4096x_divide( gf4096x* quo, gf4096x* rem, gf4096x num, gf4096x divisor )
     {
         gf4096x_zero(quo);
         gf4096x_copy(rem, num);
+        return 1;
+    }
+
+    /* divide by one */
+    if( gf4096x_is_one(divisor) == 1 )
+    {
+        gf4096x_copy(quo, num);
+        gf4096x_zero(rem);
         return 1;
     }
 
@@ -492,8 +516,6 @@ unsigned int gf4096x_eval( gf4096x polynomial, unsigned int point )
         acc = acc ^ gf4096_multiply(coeff, xi);
         xi = gf4096_multiply(xi, point);
     }
-
-//    printf("evaluating polynomial "); gf4096x_print(polynomial); printf(" int point %02x; result: %02x\n", point, acc);
 
     return acc;
 }

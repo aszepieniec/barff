@@ -13,8 +13,8 @@ Ansi C library for basic algebra routines for prime finite fields, for instance 
 
 # How To
  * compile:
-   * standard unit tests: `gcc -o test_algebra test_algebra.c algebra.c gfp.c csprng.c Keccak-readable-and-compact-c89.c gf*x.c -ansi -Wpedantic`
-   * big field unit tests: `gcc -o test_algebra test_algebra.c algebra.c bi.c gfbi.c Keccak-readable-and-compact-c89.c csprng.c gf*x.c -DBIG -ansi -Wpedantic`
+   * standard unit tests: `gcc -o test_algebra test_algebra.c gfp.c csprng.c Keccak-readable-and-compact-c89.c gf*x.c gfpm.c hqs.c -ansi -Wpedantic`
+   * big field unit tests: `gcc -o test_algebra test_algebra.c gfbi.c bi.c csprng.c Keccak-readable-and-compact-c89.c gf*x.c gfpm.c hqs.c -DBIG -ansi -Wpedantic`
    * big number arithmetic: `gcc -o test_bi test_bi.c bi.c csprng.c Keccak-readable-and-compact-c89.c -ansi -Wpedantic`
    * prime sampling benchmark: `gcc -o benchmark_primality benchmark_primality.c bi.c csprng.c Keccak-readable-and-compact-c89.c -ansi -Wpedantic -O3`
 

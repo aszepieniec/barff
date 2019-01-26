@@ -640,8 +640,6 @@ unsigned int gf16777216x_eval( gf16777216x polynomial, unsigned int point )
         xi = gf16777216_multiply(xi, point);
     }
 
-//    printf("evaluating polynomial "); gf16777216x_print(polynomial); printf(" int point %02x; result: %02x\n", point, acc);
-
     return acc;
 }
 

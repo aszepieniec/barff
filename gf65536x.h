@@ -22,6 +22,9 @@ int gf65536x_multiply_constant_shift( gf65536x* dest, gf65536x poly, unsigned in
 int gf65536x_divide( gf65536x* quo, gf65536x* rem, gf65536x num, gf65536x den );
 int gf65536x_xgcd( gf65536x* a, gf65536x* b, gf65536x* g, gf65536x x, gf65536x y );
 
+int gf65536x_is_zero( gf65536x a );
+int gf65536x_equals( gf65536x a, gf65536x b );
+
 int gf65536x_print( gf65536x p );
 
 #endif

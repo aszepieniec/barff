@@ -3,45 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifndef BIG
-
-/**
- * xgcd
- * Computes the Bezout relation
- *   a * x  +  b * y  =  gcd
- * from a and b using standard ints.
- */
-int xgcd( int a, int b, int* x, int* y, int* gcd )
-{
-    int q, r;
-    int u;
-    int v;
-    int m, n;
-
-    *x = 0;
-    *y = 1;
-    u = 1;
-    v = 0;
-    while( a != 0 )
-    {
-        q = b / a;
-        r = b % a;
-        m = *x - u*q;
-        n = *y - v*q;
-        b = a;
-        a = r;
-        *x = u;
-        *y = v;
-        u = m;
-        v = n;
-    }
-    *gcd = b;
-    
-    return *gcd;
-}
-
-#endif
-
 /**
  * gfpm
  * Create gfpmatrix object with given buffer. Usefule for reusing

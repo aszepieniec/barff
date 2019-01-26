@@ -25,6 +25,9 @@ int gf256x_multiply_constant_shift( gf256x* dest, gf256x poly, unsigned char con
 int gf256x_divide( gf256x* quo, gf256x* rem, gf256x num, gf256x den );
 int gf256x_xgcd( gf256x* a, gf256x* b, gf256x* g, gf256x x, gf256x y );
 
+int gf256x_equals( gf256x lhs, gf256x rhs );
+int gf256x_is_zero( gf256x op );
+
 int gf256x_print( gf256x p );
 
 #endif

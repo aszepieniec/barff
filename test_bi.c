@@ -109,7 +109,7 @@ int test_multiplication( unsigned int * random )
     l = 100 + csprng_generate_ulong(&rng) % 1000;
     m = 100 + csprng_generate_ulong(&rng) % 1000;
 
-    printf("k: %i, l: %i, m: %i  ", k, l, m);
+    printf("k: %li, l: %li, m: %li  ", k, l, m);
 
     a = bi_init(k);
     b = bi_init(l);

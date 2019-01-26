@@ -517,8 +517,6 @@ unsigned char gf256x_eval( gf256x polynomial, unsigned char point )
         xi = gf256_multiply(xi, point);
     }
 
-//    printf("evaluating polynomial "); gf256x_print(polynomial); printf(" int point %02x; result: %02x\n", point, acc);
-
     return acc;
 }
 

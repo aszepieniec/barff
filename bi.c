@@ -787,11 +787,12 @@ int bi_multiply( bi * res, bi lhs, bi rhs )
         bi_increase(&product, curr);
     }
 
-    res->sign = lhs.sign * rhs.sign;
+    product.sign = lhs.sign * rhs.sign;
 
     bi_destroy(curr);
     bi_destroy(*res);
     res->data = product.data;
+    res->sign = product.sign;
     for( res->num_limbs = product.num_limbs ; res->num_limbs > 0 ; --res->num_limbs )
     {
         if( res->data[res->num_limbs-1] != 0 )
@@ -873,14 +874,13 @@ int bi_divide( bi * quo, bi * rem, bi numerator, bi denominator )
         bi_negate(&negative_quotient);
         bi_copy(quo, negative_quotient);
 
-        bi_negate(&negative_remainder);
-        bi_add(rem, negative_remainder, denominator);
-
         one = bi_init(0);
         bi_one(&one);
         temp = bi_init(0);
         bi_copy(&temp, *quo);
         bi_subtract(quo, temp, one);
+        bi_multiply(&temp, *quo, denominator);
+        bi_subtract(rem, numerator, temp);
         bi_destroy(temp);
         bi_destroy(one);
 
@@ -1389,23 +1389,9 @@ int bi_xgcd( bi * x, bi * y, bi * g, bi a, bi b )
     {
         bi_divide(&quotient, &remainder, old_r, r);
 
-        /*
-        printf("numerator: "); bi_print_bitstring(old_r); printf("\n");
-        printf("divisor: "); bi_print_bitstring(r); printf("\n");
-        printf("quotient: "); bi_print_bitstring(quotient); printf("\n");
-        printf("remainder: "); bi_print_bitstring(remainder); printf("\n");
-        getchar();
-        */
-
         /**/
         bi_copy(&old_r, r);
         bi_copy(&r, remainder);
-        /*/
-        bi_copy(&temp2, old_r);
-        bi_copy(&old_r, r);
-        bi_multiply(&temp, quotient, r);
-        bi_subtract(&r, temp2, temp);
-        */
 
         bi_copy(&temp2, old_s);
         bi_copy(&old_s, s);
@@ -1509,71 +1495,8 @@ int bi_naf( bi * respos, bi * resneg, bi source )
 }
 
 /**
- * bi_modexp
- * Raise the base to the given power but compute only the residue of
- * that function modulo the modulus. Uses the square-and-multiply
- * routine.
- */
-int bi_modexp( bi * res, bi base, bi power, bi modulus )
-{
-    int bitsize;
-    int i;
-    bi temp, temp2;
-    bi inverse;
-
-    if( base.sign == -1 )
-    {
-        temp = bi_init(0);
-        temp2 = bi_init(0);
-        bi_divide(&temp, &temp2, base, modulus);
-        bi_modexp(res, temp2, power, modulus);
-        bi_destroy(temp);
-        bi_destroy(temp2);
-        return 1;
-    }
-
-    if( power.sign == -1 )
-    {
-        inverse = bi_init(0);
-        temp2 = bi_init(0);
-        bi_modinverse(&inverse, base, modulus);
-        bi_copy(&temp2, power);
-        bi_negate(&temp2);
-        bi_modexp(res, inverse, temp2, modulus);
-        bi_destroy(inverse);
-        bi_destroy(temp2);
-        return 1;
-    }
-
-    if( bi_bitsize(power) > 20 && bi_bitsize(modulus) > 250 )
-    {
-        return bi_modexp_naf(res, base, power, modulus);
-    }
-
-    temp = bi_init(0);
-
-    bi_one(res);
-
-    bitsize = bi_bitsize(power);
-    for( i = bitsize ; i >= 0 ; --i )
-    {
-        bi_multiply(&temp, *res, *res);
-
-        if( bi_getbit(power, i) == 1 )
-        {
-            bi_multiply(&temp, *res, base);
-        }
-
-        bi_modulo(res, temp, modulus);
-    }
-
-    bi_destroy(temp);
-
-    return 1;
-}
-/**
  * bi_modexp_naf
- * Does the same thing except first transforms the power into NAF.
+ * Perform modular exponentiation except first transforms the power into NAF.
  * This sparsity transformation leads to fewer multiplications and
  * the tradeoff is positive when the integers are large (sortof
  * bigger than 250 bits).
@@ -1658,6 +1581,71 @@ int bi_modexp_naf( bi * res, bi base, bi power, bi modulus )
 }
 
 /**
+ * bi_modexp
+ * Raise the base to the given power but compute only the residue of
+ * that function modulo the modulus. Uses the square-and-multiply
+ * routine.
+ */
+int bi_modexp( bi * res, bi base, bi power, bi modulus )
+{
+    int bitsize;
+    int i;
+    bi temp, temp2;
+    bi inverse;
+
+    if( base.sign == -1 )
+    {
+        temp = bi_init(0);
+        temp2 = bi_init(0);
+        bi_divide(&temp, &temp2, base, modulus);
+        bi_modexp(res, temp2, power, modulus);
+        bi_destroy(temp);
+        bi_destroy(temp2);
+        return 1;
+    }
+
+    if( power.sign == -1 )
+    {
+        inverse = bi_init(0);
+        temp2 = bi_init(0);
+        bi_modinverse(&inverse, base, modulus);
+        bi_copy(&temp2, power);
+        bi_negate(&temp2);
+        bi_modexp(res, inverse, temp2, modulus);
+        bi_destroy(inverse);
+        bi_destroy(temp2);
+        return 1;
+    }
+
+    if( bi_bitsize(power) > 20 && bi_bitsize(modulus) > 250 )
+    {
+        return bi_modexp_naf(res, base, power, modulus);
+    }
+
+    temp = bi_init(0);
+
+    bi_one(res);
+
+    bitsize = bi_bitsize(power);
+    for( i = bitsize-1 ; i >= 0 ; --i )
+    {
+        bi_multiply(&temp, *res, *res);
+        bi_modulo(&temp, temp, modulus);
+
+        if( bi_getbit(power, i) == 1 )
+        {
+            bi_multiply(&temp, temp, base);
+        }
+
+        bi_modulo(res, temp, modulus);
+    }
+
+    bi_destroy(temp);
+
+    return 1;
+}
+
+/**
  * bi_modinverse
  * Compute the multiplicative inverse of some element modulo the
  * modulus. If no multiplicative inverse exists, this function will
@@ -1689,8 +1677,8 @@ int bi_modinverse( bi * res, bi element, bi modulus )
  * Perform a single Miller-Rabin trial of the integer with base as
  * test.
  * @returns
- *  * 0 if the integer is definitely composite, 1 if it might be a
- *    prime
+ *  * 0 -- definitely composite; or
+ *  * 1 -- possibly prime
  */
 int bi_miller_rabin_trial( bi integer, bi base )
 {
@@ -1745,6 +1733,7 @@ int bi_miller_rabin_trial( bi integer, bi base )
     {
         bi_copy(&temp, x);
         bi_modexp(&x, temp, two, integer);
+
         if( bi_is_one(x) )
         {
             bi_destroy(x);
@@ -1753,8 +1742,9 @@ int bi_miller_rabin_trial( bi integer, bi base )
             bi_destroy(one);
             bi_destroy(two);
             bi_destroy(temp);
-            return 0;
+            return 1;
         }
+        
         if( bi_compare(x, nm1) == 0 )
         {
             bi_destroy(x);
@@ -1795,7 +1785,7 @@ int bi_miller_rabin_trial( bi integer, bi base )
  */
 int bi_is_prime( bi integer, unsigned long int * random_ints, int certainty )
 {
-    bi base, mod6;
+    bi base, mod24;
     int i;
     int composite;
 
@@ -1818,17 +1808,20 @@ int bi_is_prime( bi integer, unsigned long int * random_ints, int certainty )
         }
     }
 
-    /* make sure the integer is 1 or -1 modulo 6 */
-    base = bi_cast(6);
-    mod6 = bi_init(3);
-    bi_modulo(&mod6, integer, base);
+    /* make sure the integer raised to 4 is 1 modulo 24 */
+    base = bi_cast(24);
+    mod24 = bi_init(5);
+    bi_modulo(&mod24, integer, base);
+    bi_multiply(&mod24, mod24, mod24);
+    bi_multiply(&mod24, mod24, mod24);
+    bi_modulo(&mod24, mod24, base);
     bi_destroy(base);
-    if( mod6.data[0] != 1 && mod6.data[0] != 5 )
+    if( mod24.data[0] != 1 )
     {
-        bi_destroy(mod6);
+        bi_destroy(mod24);
         return 0;
     }
-    bi_destroy(mod6);
+    bi_destroy(mod24);
 
     /* run Miller-Rabin trials */
     composite = 1;
@@ -1865,7 +1858,6 @@ int bi_getbit( bi integer, int bit_index )
 /**
  * bi_print
  * Send the decimal representation of this integer to stdout.
- * TODO: debug
  */
 int bi_print( bi integer )
 {

@@ -18,6 +18,9 @@ gf4096x gf4096x_init( int deg );
 int gf4096x_copy( gf4096x* dest, gf4096x source );
 int gf4096x_destroy( gf4096x p );
 
+int gf4096x_equals( gf4096x lhs, gf4096x rhs );
+int gf4096x_is_zero( gf4096x op );
+
 unsigned int gf4096x_eval( gf4096x polynomial, unsigned int point );
 int gf4096x_add( gf4096x* dest, gf4096x lhs, gf4096x rhs );
 int gf4096x_multiply( gf4096x* dest, gf4096x lhs, gf4096x rhs );

@@ -6,7 +6,7 @@
 #include "gf256x.h"
 #include "gf65536x.h"
 #include "gf16777216x.h"
-#include "gf4096x.h"
+#include "gf4096x.h" 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -893,7 +893,6 @@ int test_gf65536x_divide( )
     quotient = gf65536x_init(0);
     remainder = gf65536x_init(0);
     gf65536x_divide(&quotient, &remainder, numerator, divisor);
-    printf("\n");
 
     product = gf65536x_init(0);
     gf65536x_multiply(&product, divisor, quotient);
@@ -939,7 +938,7 @@ int test_gf65536x_xgcd( )
     int equal;
     gf65536x x, y, a, b, g, ax, by, sum, quotient, remainder;
     csprng rng;
-    unsigned int random;
+    long unsigned int random;
     unsigned char * randomness;
     int equals;
 
@@ -1285,7 +1284,7 @@ int test_gf16777216x_xgcd( )
     int equal;
     gf16777216x x, y, a, b, g, ax, by, sum, quotient, remainder;
     csprng rng;
-    unsigned int random;
+    unsigned long int random;
     unsigned char * randomness;
     int equals;
 
@@ -1835,7 +1834,6 @@ int test_gf2x_modinv()
 
     while( elm.degree >= mod.degree || gf2x_is_one(inv) == 0 )
     {
-        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
         elm.degree = n;
         csprng_generate(&rng, n/8+1, elm.data);
         gf2x_trim(&elm);
@@ -1907,7 +1905,6 @@ int test_gf2x_modexp()
 
     while( elm.degree >= mod.degree || gf2x_is_one(inv) == 0 )
     {
-        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
         elm.degree = n;
         csprng_generate(&rng, n/8+1, elm.data);
         gf2x_trim(&elm);
@@ -2070,7 +2067,6 @@ int test_gf2x_minpoly()
 
     while( elm.degree >= mod.degree || gf2x_is_one(min) == 0 )
     {
-        //printf("inside loop because elm.degree = %i >= mod.degree = %i or inv = "); gf2x_print(inv); printf(" =/= 1\n");
         elm.degree = n;
         csprng_generate(&rng, n/8+1, elm.data);
         gf2x_trim(&elm);
@@ -2363,6 +2359,7 @@ int test_gf4096x_xgcd( )
     int equals;
 
     random = rand();
+    random = 1131176229;
     csprng_init(&rng);
     csprng_seed(&rng, sizeof(unsigned int), (unsigned char *)&random);
 
@@ -2370,7 +2367,7 @@ int test_gf4096x_xgcd( )
     m = csprng_generate_ulong(&rng) % 200;
     n = csprng_generate_ulong(&rng) % 200;
 
-    printf("testing xgcd GF(4096)[x] elements of degrees %i, and %i... ", m, n);
+    printf("testing xgcd GF(4096)[x] elements of degrees %i, and %i (randomness: %u) ... ", m, n, random);
 
     x = gf4096x_init(m);
     csprng_generate(&rng, 2*x.degree+2, x.data);
@@ -2437,6 +2434,7 @@ int test_gf4096x_xgcd( )
         else
         {
             printf("x is nonzero mod g\n");
+            printf("x = "); gf4096x_print(remainder); printf("\n");
         }
 
     gf4096x_divide(&quotient, &remainder, y, g);
@@ -2447,6 +2445,7 @@ int test_gf4096x_xgcd( )
         else
         {
             printf("y is nonzero mod g\n");
+            printf("y = "); gf4096x_print(remainder); printf("\n");
         }
     }
 
@@ -2482,35 +2481,35 @@ int main( int argc, char ** argv )
 
     printf("testing basic algebra routines for finite fields ...\n");
 
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_csprng();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_matrix_inverse();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_multiply_transpose();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_solve();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_composition();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf256x_add();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf256x_multiply();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf256x_divide();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf256x_xgcd();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536_inverse();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_add();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_multiply();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_divide();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf65536x_xgcd();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216_inverse();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_add();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_multiply();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_add();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_divide();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
-    for( i = 0 ; i < 0 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_csprng();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_matrix_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_multiply_transpose();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_solve();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_composition();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf256x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf65536_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf65536x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf65536x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf65536x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf65536x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216_inverse();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf16777216x_modexp();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_add();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_multiply();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_divide();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_xgcd();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_lcm();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modinv();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_modexp();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_karatsuba();
+    for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf2x_minpoly();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096_inverse();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_add();
     for( i = 0 ; i < 10 && b == 1 ; ++i ) b = b & test_gf4096x_multiply();

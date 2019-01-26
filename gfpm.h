@@ -30,6 +30,7 @@ int gfpm_random( gfpmatrix mat, unsigned char * randomness );
 int gfpm_random_upper_triangular( gfpmatrix mat, unsigned char * randomness  );
 int gfpm_random_invertible( gfpmatrix mat, unsigned char * randomness  );
 int gfpm_transpose( gfpmatrix * mat );
+int gfpm_add( gfpmatrix dest, gfpmatrix left, gfpmatrix right );
 int gfpm_multiply( gfpmatrix * dest, gfpmatrix left, gfpmatrix right );
 int gfpm_multiply_transpose( gfpmatrix * dest, gfpmatrix left, gfpmatrix rightT );
 int gfpm_transpose_multiply( gfpmatrix * dest, gfpmatrix leftT, gfpmatrix right );
@@ -50,6 +51,7 @@ int gfpm_slice( gfpmatrix dest, gfpmatrix mat, unsigned  int row_start, unsigned
 int gfpm_inverse( gfpmatrix dest, gfpmatrix mat );
 
 int gfpm_print( gfpmatrix mat );
+int gfpm_print_transpose( gfpmatrix mat );
 
 #endif
 

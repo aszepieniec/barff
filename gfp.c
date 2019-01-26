@@ -4,6 +4,35 @@
 
 #if GFP_NUMBYTES <= 4
 
+int xgcd( int a, int b, int * x, int * y, int * gcd )
+{
+    int q, r;
+    int u;
+    int v;
+    int m, n;
+
+    *x = 0;
+    *y = 1;
+    u = 1;
+    v = 0;
+    while( a != 0 )
+    {
+        q = b / a;
+        r = b % a;
+        m = *x - u*q;
+        n = *y - v*q;
+        b = a;
+        a = r;
+        *x = u;
+        *y = v;
+        u = m;
+        v = n;
+    }
+    *gcd = b;
+    
+    return *gcd;
+}
+
 gfp_element gfp( int castee )
 {
     gfp_element e;

@@ -53,17 +53,12 @@ int main( int argc, char ** argv )
             csprng_generate(&rng, sizeof(unsigned long int) * num_limbs, (unsigned char*)randomness);
             bi_random(&p, bitsize, (unsigned char *)randomness);
             bi_setbit(&p, 0, 1);
-            printf("testing candidate number "); bi_print(p); printf(" for primality ...\n");
         }
         while( bi_is_prime(p, random_ints, certainty) == 0 );
+        printf("got prime number: "); bi_print(p); printf("\n");
     }
 
     printf("done.\n");
-
-    if( num_trials == 1 )
-    {
-        printf("p = int('"); bi_print_bitstring(p); printf("', 2)\n");
-    }
 
     bi_destroy(p);
     free(randomness);
